@@ -18,10 +18,14 @@ JUMANをWindows上で使いやすくするためのパッチと、MinGW上でビ
 
 ## 使用例
 Shift_JISのファイルを入力し、結果をUTF-8でファイルに出力：  
-    path\to\juman.exe --enc sjis,utf-8 --if sjis.txt --of result.txt
+'''shell
+path\to\juman.exe --enc sjis,utf-8 --if sjis.txt --of result.txt
+'''
 
 コマンドプロンプトでインタラクティブに分析：  
-    path\to\juman.exe -b --enc CP932
+'''shell
+path\to\juman.exe -b --enc CP932
+'''
 
 追加オプションは、ハイフン2つで始まります。
 
@@ -49,10 +53,12 @@ Shift_JISのファイルを入力し、結果をUTF-8でファイルに出力：
 
 
 MinGWのコンソールにて展開ディレクトリに移動後、以下を順に入力します。  
-    ./btool load
-    ./btool patch
-    ./btool build
-    ./btool align
+'''shell
+./btool load
+./btool patch
+./btool build
+./btool align
+'''
 
 distのディレクトリに作成されますので、その中味を適切な場所に移動してください。
 
