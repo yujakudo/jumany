@@ -50,3 +50,15 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+#archives
+*.zip
+*.tar
+*.bz
+*.bz2
+
+#env
+.*
+.vscode/
+dist/
+text/

@@ -1,0 +1,84 @@
+#!/usr/bin/bash +x
+
+juman_url=http://nlp.ist.i.kyoto-u.ac.jp/nl-resource/juman/juman-7.01.tar.bz2
+juman=juman-7.01
+juman_dir=${juman}
+patch=ext_${juman}_01.patch
+#ldflags=
+ldflags="-Wl,-Bstatic"
+#libs=
+libs="-lregex -ltre -lintl -liconv"
+dist_name=juman-7.01_patched-win64
+#dist=$HOME/local
+dist=/tmp/${dist_name}
+distzip=${dist_name}.zip
+
+for cmd in $*; do
+
+if [ $cmd = "load" ]; then
+	wget ${juman_url}
+	tar xf juman-7.01.tar.bz2
+fi
+
+if [ $cmd = "patch" ]; then
+	cd $juman_dir
+	patch -p1 < ../${patch}
+	cd ..
+fi
+
+if [ $cmd = "build" ]; then
+	cd $juman_dir
+	mkdir -p ${dist}
+	rm -rf ${dist}/*
+	./configure --prefix=${dist} --bindir=${dist} \
+				LDFLAGS="${ldflags}" LIBS="${libs}" \
+				CFLAGS=-Ofast
+	make clean all install
+	cd ..
+fi
+
+if [ $cmd = "debug" ]; then
+	cd $juman_dir
+	./configure --prefix=${dist}/debug --bindir=${dist}/debug \
+				LDFLAGS="${ldflags}" LIBS="${libs}" \
+				CFLAGS="-g -O0"
+	make clean all install
+	cd ..
+fi
+
+if [ $cmd = "install" ]; then
+	cd $juman_dir
+	make install
+	cd ..
+fi
+
+if [ $cmd = "align" ]; then
+	curdir=$PWD
+	cd $dist
+	mkdir dics
+	mv share/juman/doc/manual.pdf .
+	mv share/juman/*dic dics
+	rm -rf share
+	mv include etc
+	mv lib etc
+	mv libexec etc
+	cp ${curdir}/jumanrc.win ./jumanrc
+	cd $curdir
+fi
+
+if [ $cmd = "diff" ]; then
+	diff_opt="-rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.exe -x Makefile"
+	fromdir=juman-7.01
+	todir=/tmp/juman-7.01
+	/b/bin/diff ${diff_opt} ${fromdir} ${todir} > ${patch}
+fi
+
+if [ $cmd = "zip" ]; then
+	curdir=$PWD
+	cd $dist
+	cd ..
+	zip -r ${curdir}/${distzip} ${dist_name}
+	cd $curdir
+fi
+
+done
