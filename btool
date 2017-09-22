@@ -18,15 +18,13 @@ for cmd in $*; do
 if [ $cmd = "load" ]; then
 	wget ${juman_url}
 	tar xf juman-7.01.tar.bz2
-fi
 
-if [ $cmd = "patch" ]; then
+elif [ $cmd = "patch" ]; then
 	cd $juman_dir
 	patch -p1 < ../${patch}
 	cd ..
-fi
 
-if [ $cmd = "build" ]; then
+elif [ $cmd = "build" ]; then
 	cd $juman_dir
 	mkdir -p ${dist}
 	rm -rf ${dist}/*
@@ -35,24 +33,21 @@ if [ $cmd = "build" ]; then
 				CFLAGS=-Ofast
 	make clean all install
 	cd ..
-fi
 
-if [ $cmd = "debug" ]; then
+elif [ $cmd = "debug" ]; then
 	cd $juman_dir
 	./configure --prefix=${dist}/debug --bindir=${dist}/debug \
 				LDFLAGS="${ldflags}" LIBS="${libs}" \
 				CFLAGS="-g -O0"
 	make clean all install
 	cd ..
-fi
 
-if [ $cmd = "install" ]; then
+elif [ $cmd = "install" ]; then
 	cd $juman_dir
 	make install
 	cd ..
-fi
 
-if [ $cmd = "align" ]; then
+elif [ $cmd = "align" ]; then
 	curdir=$PWD
 	cd $dist
 	mkdir dics
@@ -63,22 +58,27 @@ if [ $cmd = "align" ]; then
 	mv lib etc
 	mv libexec etc
 	cp ${curdir}/jumanrc.win ./jumanrc
+	cp ${curdir}/juman-i.bat .
 	cd $curdir
-fi
 
-if [ $cmd = "diff" ]; then
+elif [ $cmd = "diff" ]; then
 	diff_opt="-rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.exe -x Makefile"
 	fromdir=juman-7.01
 	todir=/tmp/juman-7.01
 	/b/bin/diff ${diff_opt} ${fromdir} ${todir} > ${patch}
-fi
 
-if [ $cmd = "zip" ]; then
+elif [ $cmd = "zip" ]; then
+	cp copying.txt $dist
 	curdir=$PWD
 	cd $dist
 	cd ..
 	zip -r ${curdir}/${distzip} ${dist_name}
 	cd $curdir
+
+elif [ $cmd = "clean-dist" ]; then
+	rm -rf $dist
+else
+	echo "Unknown command: " $cmd
 fi
 
 done
