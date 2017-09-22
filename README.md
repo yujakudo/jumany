@@ -17,11 +17,11 @@ JUMANをWindows上で使いやすくするためのパッチと、MinGW上でビ
 2-4は、公式リリース版と共存可能にし、ディレクトリの配置を自由にするための仕様変更です。
 
 ## 使用例
-Shift_JISのファイルを入力し、結果をUTF-8でファイルに出力：
-	path\to\juman.exe --enc sjis,utf-8 --if sjis.txt --of result.txt
+Shift_JISのファイルを入力し、結果をUTF-8でファイルに出力：  
+    path\to\juman.exe --enc sjis,utf-8 --if sjis.txt --of result.txt
 
-コマンドプロンプトでインタラクティブに分析：
-	path\to\juman.exe -b --enc CP932
+コマンドプロンプトでインタラクティブに分析：  
+    path\to\juman.exe -b --enc CP932
 
 追加オプションは、ハイフン2つで始まります。
 
@@ -48,11 +48,11 @@ Shift_JISのファイルを入力し、結果をUTF-8でファイルに出力：
 デフォルトでは、'/tmp/juman-7.01_patched-win64'にインストールするようになっています。
 
 
-MinGWのコンソールにて展開ディレクトリに移動後、以下を順に入力します。
-	./btool load
-	./btool patch
-	./btool build
-	./btool align
+MinGWのコンソールにて展開ディレクトリに移動後、以下を順に入力します。  
+    ./btool load
+    ./btool patch
+    ./btool build
+    ./btool align
 
 distのディレクトリに作成されますので、その中味を適切な場所に移動してください。
 
