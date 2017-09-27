@@ -1,0 +1,1256 @@
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/configure juman-7.01/configure
+--- B:/msys64/tmp/juman-7.01/configure	Mon Dec 15 09:50:09 2014
++++ juman-7.01/configure	Sun Sep 24 19:51:02 2017
+@@ -10488,7 +10488,7 @@ CC="$lt_save_CC"
+ 
+ 
+ 
+-LIBJUMAN_VERSION_INFO="4:0:0"
++LIBJUMAN_VERSION_INFO="4:0:1"
+ 
+ 
+ # Checks for libraries.
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/juman/juman.c juman-7.01/juman/juman.c
+--- B:/msys64/tmp/juman-7.01/juman/juman.c	Tue Dec 27 17:29:53 2011
++++ juman-7.01/juman/juman.c	Mon Sep 25 13:48:20 2017
+@@ -46,6 +46,9 @@ extern U_CHAR	        String[LENMAX];
+ int             JUMAN_server_mode = FALSE;
+ int             JUMAN_server_foreground = FALSE;
+ 
++char * infile_Opt = NULL;
++char * outfile_Opt = NULL;
++
+ #define JUMAN_PORT   32000
+ #ifndef MAXHOSTNAMELEN
+ #define MAXHOSTNAMELEN 64
+@@ -151,7 +154,10 @@ int readtonl(FILE *fp)
+ 
+ void juman_standalone(void)
+ {
+-    int length;
++	int length;
++	char * String;
++	size_t buff_size;
++	FILE *fd_in, *fd_out;
+     
+     if (!juman_init_rc(Jumanrc_Fileptr)) {	/* rcfile関係の初期化 */
+ 	fprintf(stderr, "error in .jumanrc\n");
+@@ -161,20 +167,36 @@ void juman_standalone(void)
+ #ifdef HAVE_REGEX_H
+     if (Onomatopoeia_Opt) Unkword_Pat_Num = compile_unkword_patterns();
+ #endif
++	//	for convert encoding
++	String = get_input_buff(&buff_size);
++	fd_in = stdin;
++	fd_out = stdout;
++	if(NULL != infile_Opt) {
++		if(NULL==(fd_in = fopen(infile_Opt, "rb"))) {
++			fprintf(stderr, "Cannot open file to read.(%s)\n", infile_Opt);
++			return;
++		}
++	}
++	if(NULL != outfile_Opt) {
++		if(NULL==(fd_out = fopen(outfile_Opt, "wb"))) {
++			fprintf(stderr, "Cannot open file to write.(%s)\n", outfile_Opt);
++			return;
++		}
++	}
+ 
+-    String[LENMAX - 1] = '\n';
+-    while ( fgets(String, LENMAX, stdin) != NULL ) {
+-	if (String[LENMAX - 1] != '\n') {
+-	    String[LENMAX - 1] = '\0';
++    String[buff_size - 1] = '\n';
++    while ( fgets(String, buff_size, fd_in) != NULL ) {
++	if (String[buff_size - 1] != '\n') {
++	    String[buff_size - 1] = '\0';
+ 	    fprintf(stderr, "Too long input string (%s).\n", String);
+-	    String[LENMAX - 1] = '\n';
+-	    readtonl(stdin);
++	    String[buff_size - 1] = '\n';
++	    readtonl(fd_in);
+ 	    continue;
+ 	}
+ 	
+ 	length = strlen(String);
+-	if (length == LENMAX-1 && String[length - 1] != '\n') {
+-	    fprintf(stderr, "Too long input string (%s).\n", String);
++	if (length == buff_size-1 && String[length - 1] != '\n') {
++	    enc_fprintf(stderr, "Too long input string (%s).\n", String);
+ 	    continue;
+ 	} else {
+ #ifdef _WIN32
+@@ -187,27 +209,27 @@ void juman_standalone(void)
+ 
+ 	if (Show_Opt_tag[0])
+ 	    if (!strncmp(String , Show_Opt_tag , strlen(Show_Opt_tag))) {
+-		fprintf(stdout, "%s JUMAN:%s\n", String, VERSION);
+-		continue;
++			enc_fprintf(fd_out, "%s JUMAN:%s\n", String, VERSION);
++			continue;
+ 	    }
+ 
+ 	if (juman_sent() == TRUE) {
+ 	    switch (Show_Opt1) {
+ 	    case Op_B:
+-		print_best_path(stdout); break;
++		print_best_path(fd_out); break;
+ 	    case Op_M:
+-		print_all_mrph(stdout); break;
++		print_all_mrph(fd_out); break;
+ 	    case Op_P:
+-		print_all_path(stdout); break;
++		print_all_path(fd_out); break;
+ 	    case Op_BB:
+ 	    case Op_PP:
+-		print_homograph_path(stdout); break;
++		print_homograph_path(fd_out); break;
+ 	    default:
+ 		break;
+ 	    }
+ 	}
+-	fprintf(stdout, "EOS\n");
+-	fflush(stdout);
++	fprintf(fd_out, "EOS\n");
++	fflush(fd_out);
+     }
+     juman_close();
+ }
+@@ -301,12 +323,21 @@ else {
+ 		    }
+ 		    else if ( argv[i][0] == 'o' && argv[i][1] == 'n' && argv[i][2] == 'o') {
+ 			Repetition_Opt = Onomatopoeia_Opt = 0; /* onomatopoeia */
+-		    }
++			}
+ 		    else {
+ 			juman_help();				  
+ 		    }
+ 		}
+-	    }
++	    } else if(argv[i][1] == '-') {
++			//	Extended options
++			if(0==strncmp(argv[i], "--enc", 5)) {
++				set_encoding_opt(argv[++i]);
++			} else if(0==strncmp(argv[i], "--if", 4)) {
++				infile_Opt = argv[++i];
++			} else if(0==strncmp(argv[i], "--of", 4)) {
++				outfile_Opt = argv[++i];
++			}
++		}
+ 	    /* サーバーモード用のオプションの取扱い */
+             else if ( argv[i][1] == 'S' ) JUMAN_server_mode = TRUE;
+ #if ! defined _WIN32
+@@ -377,6 +408,9 @@ void juman_help()
+     fprintf(stderr, "             -u : disable unknown word processing\n");
+     fprintf(stderr, "             -i : ignore an input line starting with 'string'\n");
+     fprintf(stderr, "             -r : use 'rc_file' as '.jumanrc'\n");
++    fprintf(stderr, "             --if FILEPATH: path to input file\n");
++    fprintf(stderr, "             --of FILEPATH: path to output file\n");
++    fprintf(stderr, "             --enc ENCODING: encoding e.g.'CP932', 'sjis,utf-8'\n");
+     fprintf(stderr, "             -v : show version\n");
+     fprintf(stderr, "\n");
+     fprintf(stderr, "             -S : start JUMAN server\n");
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/encoder.c juman-7.01/lib/encoder.c
+--- B:/msys64/tmp/juman-7.01/lib/encoder.c	Thu Jan  1 00:00:00 1970
++++ juman-7.01/lib/encoder.c	Fri Sep 22 14:48:40 2017
+@@ -0,0 +1,245 @@
++#include <stdlib.h>
++#include <stdarg.h>
++#include <string.h>
++#include "encoder.h"
++
++static void enc_stream_init(ENC_STREAM_T *pstream);
++static bool enc_stream_set(
++	ENC_STREAM_T *pstream, const char * const * pencodings, 
++	size_t buff_size, char ** pbuffs);
++static bool enc_stream_alloc(ENC_STREAM_T *pstream, int idx);
++static void enc_stream_free(ENC_STREAM_T *pstream);
++static bool enc_stream_convert(ENC_STREAM_T *pstream);
++
++///	New encoder
++///	@param buff_input_write Default buffer to write input. if NULL, newly allocates.
++/// @param size_input Size of buffer for input.
++///	@param buff_output_read Default buffer to read output. if NULL, newly allocates.
++/// @param size_output Size of buffer for output.
++/// @return Pointer of encoder. Or NULL, if failed.
++ENCODER_T * encoder_new(
++	char * buff_input_write, size_t size_input,
++	char * buff_output_read, size_t size_output) {
++	
++	ENCODER_T * penc;
++	if(NULL==(penc = malloc(sizeof(ENCODER_T)))) return NULL;
++	enc_stream_init(&(penc->in));
++	enc_stream_init(&(penc->out));
++	//	temporaly store
++	penc->in.buff[1] = buff_input_write;
++	penc->in.size = size_input;
++	penc->out.buff[0] = buff_output_read;
++	penc->out.size = size_output;
++	return penc;
++}
++
++///	Delete encoder
++///	@param penc Encoder properties.
++void encoder_delete(ENCODER_T *penc) {
++	if(NULL==penc) return;
++	enc_stream_free(&(penc->in));
++	enc_stream_free(&(penc->out));
++	free(penc);
++}
++
++///	Set encodings
++///	@param penc Encoder properties.
++/// @param s_inner Name of inner encoding. If NULL or null string, set to UTF-8
++/// @param s_inout Comma separated string of input and output encoding.
++///	If comma does not exist, both input and output encoding considered this value.
++///	If NULL or null string, considered same as inner encoding and will not do encoding.
++bool encoder_set_encoding(ENCODER_T *penc, const char * s_inner, const char * s_inout) {
++	char s_io[ENC_NAME_LEN*2];
++	char * s_incode, * s_outcode;
++	const char * encodings[2];
++	char * buffers[2];
++
++	if(NULL==s_inner || 0==s_inner[0])	s_inner = "UTF-8";
++	s_io[0] = 0;
++	if(NULL!=s_inout) strncpy(s_io, s_inout, sizeof(s_io));
++	s_io[sizeof(s_io)-1] = 0;
++	//	split s_inout
++	s_incode = s_outcode = s_io;
++	while(*s_outcode!=0 && *s_outcode!=',') s_outcode++;
++	if(*s_outcode==',') *s_outcode++ = 0;		
++	else s_outcode = s_incode;
++	//	set input stream
++	encodings[0] = s_incode;
++	buffers[0] = NULL;
++	encodings[1] = s_inner;
++	buffers[1] = penc->in.buff[1];
++	if(!enc_stream_set(&(penc->in), encodings,  penc->in.size, buffers)) {
++		return false;
++	}
++	//	set output stream
++	encodings[0] = s_inner;
++	buffers[0] = penc->out.buff[0];
++	encodings[1] = s_outcode;
++	buffers[1] = NULL;
++	if(!enc_stream_set(&(penc->out), encodings,  penc->out.size, buffers)) {
++		return false;
++	}
++	return true;
++}
++
++///	Get input buffer to write.
++///	@param penc Encoder properties.
++/// @param direction. Stream direction. ENC_IN(0) or ENC_OUT(1)
++/// @param port. Port of stream. ENC_WRITE(0) or ENC_READ(1)
++///	@param psize [out]Pointer to write buffer size.
++/// @return buffer pointer.
++char * encoder_getbuff(ENCODER_T *penc, int direction, int port, size_t *psize) {
++	ENC_STREAM_T *pstream;
++	pstream = direction? &(penc->out): &(penc->in);
++	*psize = pstream->size;
++	return pstream->buff[port];
++}
++
++/// Conver encoding.
++///	@param penc Encoder properties.
++/// @param direction. ENC_IN(0) or ENC_OUT(1)
++/// @return Success or fail
++bool encoder_convert(ENCODER_T *penc, int direction) {
++	ENC_STREAM_T *pstream;
++	const char * s_direc;
++	pstream = direction? &(penc->out): &(penc->in);
++	s_direc = direction? "output": "input";
++	if(false==enc_stream_convert(pstream)) {
++		fprintf(stderr, "Fail to convert %s encoding.(%s)\n", s_direc, pstream->buff[0]);
++		return false;
++	}
++	return true;
++}
++
++/// Check needs to convert.
++///	@param penc Encoder properties.
++/// @param direction. ENC_IN or ENC_OUT
++/// @return true if needs conversion, or false.
++bool encoder_needs(ENCODER_T *penc, int direction) {
++	ENC_STREAM_T *pstream;
++	pstream = direction? &(penc->out): &(penc->in);
++	return (IC_FALSE==pstream->ic)? false: true;
++}
++
++/// printf with coverting.
++///	@param penc Encoder properties.
++///	@param stream stream to output.
++/// @param format Format will be filled with following arguments.
++/// @return Success or fail
++bool encoder_printf(ENCODER_T *penc, FILE * stream, const char * format, ...) {
++	va_list va;
++	bool result;
++
++	va_start(va, format);
++	result = encoder_vprintf(penc, stream, format, va);
++	va_end(va);
++	return result;
++}
++
++/// vprintf with coverting.
++///	@param penc Encoder properties.
++///	@param stream stream to output.
++/// @param format Format.
++/// @param va Argumets to fill format with.
++/// @return Success or fail
++bool encoder_vprintf(ENCODER_T *penc, FILE * stream, const char * format, va_list va) {
++	int result;
++	ENC_STREAM_T *pstream;
++
++	if(stream==stderr || IC_FALSE==penc->out.ic) {
++		vfprintf(stream, format, va);
++		return true;
++	}
++	pstream = &(penc->out);
++	result = vsnprintf(pstream->buff[0], pstream->size, format, va);
++	if(result<0 || pstream->size<=result) {
++		fprintf(stderr, "Fail to fill format in encoder_printf.(%s)\n", format);
++		return false;
++	}
++	if(false==enc_stream_convert(pstream)) {
++		fprintf(stderr, "Fail to convert encoding in encoder_printf.(%s)\n", pstream->buff[0]);
++		return false;
++	}
++	fprintf(stream, pstream->buff[1]);
++	return true;
++}
++
++static void enc_stream_init(ENC_STREAM_T *pstream) {
++	pstream->ic = IC_FALSE;
++	pstream->size = 0;
++	pstream->buff[0] = pstream->buff[1] = NULL;
++	pstream->b_alloced[0] = pstream->b_alloced[1] = false;
++}
++
++static bool enc_stream_set(
++	ENC_STREAM_T *pstream, const char * const * pencodings, 
++	size_t buff_size, char ** pbuffs) {
++
++	int i;
++	if( pencodings[0][0]==0 || pencodings[1][0]==0
++		|| 0==stricmp(pencodings[0], pencodings[1])) {
++
++		//	No needs to convert. both buffers are same.
++		if(NULL==pbuffs[0] && NULL==pbuffs[1]) {
++			if(!enc_stream_alloc(pstream, 0)) return false;
++			pstream->buff[1] = pstream->buff[0];
++		} else if(NULL==pbuffs[1]) {
++			pstream->buff[0] = pstream->buff[1] = pbuffs[0];
++		} else {
++			pstream->buff[0] = pstream->buff[1] = pbuffs[1];
++		}
++		return true;
++	}
++	//	open iconv
++	pstream->ic = iconv_open(pencodings[1], pencodings[0]);
++	if(IC_FALSE==pstream->ic) {
++		fprintf(stderr, "Encoding name(%s or %s) is not avairable.\n", pencodings[0],  pencodings[1]);
++		return false;
++	}
++	//	allocate buffer
++	pstream->size = buff_size;
++	for(i=0; i<2; i++) {
++		pstream->buff[i] = pbuffs[i];
++		if(!enc_stream_alloc(pstream, i)) return false;
++	}
++	return true;
++}
++
++static bool enc_stream_alloc(ENC_STREAM_T *pstream, int idx) {
++	if(NULL==pstream->buff[idx]) {
++		if(NULL==(pstream->buff[idx] = malloc(pstream->size))) {
++			fprintf(stderr, "Fail to allocate buffer in encoder.\n");
++			return false;
++		}
++		pstream->b_alloced[idx] = true;
++	}
++	return true;
++}
++
++static void enc_stream_free(ENC_STREAM_T *pstream) {
++	int i;
++	if(IC_FALSE != pstream->ic)	{
++		iconv_close(pstream->ic);
++		pstream->ic = IC_FALSE;
++	}
++	for(i=0; i<2; i++) {
++		if(pstream->b_alloced[i]) {
++			free(pstream->buff[i]);
++			pstream->b_alloced[i] = false;
++		}
++	}	
++}
++
++static bool enc_stream_convert(ENC_STREAM_T *pstream) {
++	char *pinbuf, *poutbuf;
++	size_t inbuf_size, outbuf_size, result;
++
++	if(IC_FALSE==pstream->ic) return true;	//	nothing to do
++	pinbuf = pstream->buff[0];
++	poutbuf = pstream->buff[1];
++	inbuf_size = strlen(pinbuf);
++	outbuf_size = pstream->size - 1;
++	result = iconv(pstream->ic, &pinbuf, &inbuf_size, &poutbuf, &outbuf_size );
++	*poutbuf = 0;
++	return ((size_t)-1 == result)? false: true;
++}
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/encoder.h juman-7.01/lib/encoder.h
+--- B:/msys64/tmp/juman-7.01/lib/encoder.h	Thu Jan  1 00:00:00 1970
++++ juman-7.01/lib/encoder.h	Fri Sep 22 14:48:40 2017
+@@ -0,0 +1,107 @@
++#ifndef ENCODER_H
++#define ENCODER_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#include <stdio.h>
++#include <stdbool.h>
++#include <iconv.h>
++
++
++//	Length of encoding name;
++#define ENC_NAME_LEN	(22)
++//	Direction of stream
++#define ENC_IN (0)
++#define ENC_OUT (1)
++//	Port of stream
++#define ENC_WRITE (0)
++#define ENC_READ (1)
++
++typedef struct enc_stream_t {
++	iconv_t ic;			///	iconv descripter
++	char *	buff[2];	///	buffers.
++	bool b_alloced[2];	///	buff is allocated
++	size_t	size;		///	buffer size
++} ENC_STREAM_T;
++
++///	Properties
++typedef struct encoder_t {
++	ENC_STREAM_T	in;
++	ENC_STREAM_T	out;
++} ENCODER_T;
++
++#define IC_FALSE	((iconv_t)-1)
++///	ENCODER_NEEDS is same as encoder_needs
++///	but fast and will be optimized
++#define ENCODER_NEEDS(penc, direction) ( \
++	(((direction)? (penc)->out: (penc)->in).ic==IC_FALSE)? false: true \
++)
++
++///	New encoder
++///	@param buff_input_write Default buffer to write input. if NULL, newly allocates.
++/// @param size_input Size of buffer for input.
++///	@param buff_output_read Default buffer to read output. if NULL, newly allocates.
++/// @param size_output Size of buffer for output.
++/// @return Pointer of encoder. Or NULL, if failed.
++ENCODER_T * encoder_new(
++	char * buff_input_write, size_t size_input,
++	char * buff_output_read, size_t size_output);
++
++///	Delete encoder
++///	@param penc Encoder properties.
++void encoder_delete(ENCODER_T *penc);
++
++///	Set encodings
++///	@param penc Encoder properties.
++/// @param s_inner Name of inner encoding. If NULL or null string, set to UTF-8
++/// @param s_inout Comma separated string of input and output encoding.
++///	If comma does not exist, both input and output encoding considered this value.
++///	If NULL or null string, considered same as inner encoding and will not do encoding.
++bool encoder_set_encoding(ENCODER_T *penc, 
++	const char * s_inner, const char * s_inout);
++
++///	Get input buffer to write.
++///	@param penc Encoder properties.
++/// @param direction. Stream direction. ENC_IN(0) or ENC_OUT(1)
++/// @param port. Port of stream. ENC_WRITE(0) or ENC_READ(1)
++///	@param psize [out]Pointer to write buffer size.
++/// @return buffer pointer.
++extern char * encoder_getbuff(ENCODER_T *penc, 
++	int direction, int port, size_t *psize);
++
++/// Conver encoding.
++///	@param penc Encoder properties.
++/// @param direction. ENC_IN(0) or ENC_OUT(1)
++/// @return Success or fail
++extern bool encoder_convert(ENCODER_T *penc, int direction);
++
++/// Check needs to convert.
++///	@param penc Encoder properties.
++/// @param direction. ENC_IN or ENC_OUT
++/// @return true if needs conversion, or false.
++extern bool encoder_needs(ENCODER_T *penc, int direction);
++
++/// printf with coverting.
++///	@param penc Encoder properties.
++///	@param stream stream to output.
++/// @param format Format will be filled with following arguments.
++/// @return Success or fail
++bool encoder_printf(ENCODER_T *penc, 
++	FILE * stream, const char * format, ...);
++
++/// vprintf with coverting.
++///	@param penc Encoder properties.
++///	@param stream stream to output.
++/// @param format Format.
++/// @param va Argumets to fill format with.
++/// @return Success or fail
++extern bool encoder_vprintf(ENCODER_T *penc, 
++	FILE * stream, const char * format, va_list va);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif	//	ENCODER_H
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/ext_api.c juman-7.01/lib/ext_api.c
+--- B:/msys64/tmp/juman-7.01/lib/ext_api.c	Thu Jan  1 00:00:00 1970
++++ juman-7.01/lib/ext_api.c	Thu Sep 21 17:13:44 2017
+@@ -0,0 +1,270 @@
++#include <stdlib.h>
++#include <stdio.h>
++#include <string.h>
++#include "juman.h"
++#include "ext_api.h"
++
++typedef struct ext_t {
++	char * in_buf;
++	size_t in_buf_size;
++	char * word_buf;
++	size_t word_buf_size;
++	EXT_MRPH_T * mrphs_buf;
++	int max_mrphs;
++	int pos;
++} EXT_T;
++
++//	Store in global
++EXT_T Dext;
++char * NullStr = "";
++
++extern FILE * Jumanrc_Fileptr;
++extern void set_jumanrc_fileptr(char *option_rcfile, int look_rcdefault_p, int exit_rc_notfound_p);
++extern BOOL	juman_init_rc(FILE *fp);
++extern void juman_init_etc(void);
++extern int	juman_close(void);
++extern int juman_sent(void);
++extern MRPH *prepare_path_mrph(int path_num , int para_flag);
++extern void set_encoding_opt(const char * s_encoding);
++
++extern int p_buffer_num;
++extern PROCESS_BUFFER * p_buffer;
++extern int * path_buffer;
++extern U_CHAR midasi1[MIDASI_MAX];
++extern U_CHAR midasi2[MIDASI_MAX];
++extern U_CHAR yomi[MIDASI_MAX];
++extern CLASS		Class[CLASSIFY_NO + 1][CLASSIFY_NO + 1];
++extern TYPE		Type[TYPE_NO];
++extern FORM		Form[TYPE_NO][FORM_NO];
++
++static char * wordcopy(char **pword_pos, size_t *pword_buf_rest, const char * word);
++
++///	Set encoding
++///	It must be called before ext_init.
++///	If specified wrong encoding name, error will occure in ext_init.
++/// @param s_encoding Comma separated string of input and output encoding.
++///	If comma does not exist, both input and output encoding considered this value.
++///	If NULL or null string, considered same as inner encoding and will not do encoding.
++void ext_set_encoding(const char *s_encoding) {
++	set_encoding_opt(s_encoding);
++}
++	
++///	Initialize lib
++///	@param s_rcfile	Path to jumanrc
++///	@param word_buf_size Word buffer size. It is copied midasi1, yomi, and midasi2.
++///	@param max_mrphs Morpheme buffer size in number. 
++///	@return 
++///	- EXT_SUCCESS:	Success 
++///	- EXT_RC_ERROR:	Resource file error.
++///	- EXT_MALLOC_ERROR:	Cannot allocate memory.
++EXT_RES_CODE ext_init(const char *s_rcfile, size_t word_buf_size, int max_mrphs) {
++	
++	set_jumanrc_fileptr((char *)s_rcfile, TRUE, FALSE);
++	if(Jumanrc_Fileptr==NULL)	return EXT_FILE_NOT_EXISTS;
++	if(FALSE==juman_init_rc(Jumanrc_Fileptr)) return EXT_RC_ERROR;
++    juman_init_etc();
++#ifdef HAVE_REGEX_H
++	Unkword_Pat_Num = compile_unkword_patterns();
++#endif
++	Dext.in_buf = get_input_buff(&(Dext.in_buf_size));
++	Dext.word_buf_size = word_buf_size? word_buf_size: LENMAX;
++	Dext.max_mrphs = max_mrphs? max_mrphs: DEF_MAX_ITEMS;
++	Dext.word_buf = malloc(Dext.word_buf_size);
++	Dext.mrphs_buf = malloc(sizeof(EXT_MRPH_T) * Dext.max_mrphs);
++	if(NULL==Dext.word_buf || NULL==Dext.mrphs_buf) {
++		free(Dext.word_buf);
++		free(Dext.mrphs_buf);
++		return EXT_MALLOC_ERROR;
++	}
++	Dext.pos = -1;
++	return EXT_SUCCESS;
++}
++
++///	Close extlib
++void ext_close() {
++	free(Dext.word_buf);
++	free(Dext.mrphs_buf);
++	juman_close();
++}
++	
++///	Get input buffer to write.
++///	@param psize [out]Buffer size.
++///	@return Buffer address.
++char * ext_get_input_buff(size_t *psize) {
++	*psize = Dext.in_buf_size;
++	return Dext.in_buf;
++}
++
++///	Get morpheme buffer to read.
++///	@return Buffer address.
++EXT_MRPH_T * ext_get_mrph_buff() {
++	return Dext.mrphs_buf;
++}
++
++///	Analyze with best path
++///	@return 
++///	- EXT_SUCCESS:	Success 
++///	- EXT_ERROR:	Error
++EXT_RES_CODE ext_analyze() {
++    int i, j, last;
++    MRPH *mrph_p,*mrph_p1;
++
++	if(FALSE==juman_sent()) return EXT_ANA_ERROR;
++	//	from print_best_path
++    j = 0;
++    last = p_buffer_num-1;
++    do {
++		last = p_buffer[last].path[0];
++		path_buffer[j] = last;
++		j++;
++	} while ( p_buffer[last].path[0] );
++	Dext.pos = i=j-1;
++	return EXT_SUCCESS;
++}
++
++///	Get result in mopheme buffer
++///	@param pnum_mrphs [out]Number of mopheme in buffer
++///	@return 
++///	- EXT_SUCCESS:	Put all morpheme.
++///	- EXT_WORD_BUFF_OVER:	Word buffer is not enough. Call more to get all morpheme.
++///	- EXT_MRPH_BUFF_OVER:	Morpheme buffer is not enough. Call more to get all morpheme.
++EXT_RES_CODE ext_get_result(int *pnum_mrphs) {
++	
++	char * word_pos;
++	size_t word_buf_rest;
++	int path_num;
++	MRPH *mrph_p;
++	EXT_MRPH_T *pitem;
++	
++	word_pos = Dext.word_buf;
++	word_buf_rest = Dext.word_buf_size;
++	word_pos[word_buf_rest-1] = 0;
++	*pnum_mrphs = 0;
++
++	while(Dext.pos>=0 && *pnum_mrphs < Dext.max_mrphs) {
++		path_num = path_buffer[Dext.pos];
++		if ((mrph_p = prepare_path_mrph(path_num, 0)) == NULL) continue;
++		pitem = Dext.mrphs_buf + *pnum_mrphs;
++		pitem->midasi1 = wordcopy(&word_pos, &word_buf_rest, midasi1);
++		if(NULL==pitem->midasi1) return EXT_WORD_BUFF_OVER;
++		pitem->yomi = wordcopy(&word_pos, &word_buf_rest, yomi);
++		if(NULL==pitem->yomi) return EXT_WORD_BUFF_OVER;
++		pitem->midasi2 = wordcopy(&word_pos, &word_buf_rest, midasi2);
++		if(NULL==pitem->midasi2) return EXT_WORD_BUFF_OVER;
++		pitem->hinsi = mrph_p->hinsi;
++		pitem->bunrui = mrph_p->bunrui;
++		pitem->katuyou1 = mrph_p->katuyou1;
++		pitem->katuyou2 = mrph_p->katuyou2;
++
++		(*pnum_mrphs)++;
++		Dext.pos--;
++	}
++	if(Dext.pos>=0) return EXT_MRPH_BUFF_OVER;
++	return EXT_SUCCESS;
++}
++
++static char * wordcopy(char **pword_pos, size_t *pword_buf_rest, const char * word) {
++	char * pwritten;
++	int len;
++	len = strlen(word);
++	if(len+1 >= *pword_buf_rest) return NULL;
++	pwritten = strcpy(*pword_pos, word);
++	(*pword_buf_rest) -= len+1;
++	(*pword_pos) += len+1;
++	return pwritten;
++}
++
++///	Get hinsi string.
++///	@param hinsi Index of hinsi.
++///	@return String of bunrui. if index is wrong, return null string.
++const char * ext_get_hinsi(int hinsi) {
++	return (Class[hinsi][0].id==NULL)? 
++		NullStr: (const char *)Class[hinsi][0].id;
++}
++
++///	Get all hinsi
++///	@param list [out]List of hinsi. It ranges from 1 to return num-1.
++///	@return Nunber of list items.
++int ext_get_all_hinsi(const char ** list) {
++	int i;
++	*list++ = NullStr;
++	for (i=1 ; Class[i][0].id!=NULL && i<=CLASSIFY_NO; i++) {
++		*list++ = Class[i][0].id;
++	}
++	return i;
++}
++
++///	Get bunrui string.
++///	@param hinsi Index of hinsi.
++///	@param bunrui Index of bunrui.
++///	@return String of bunrui. if index is wrong, return null string.
++const char * ext_get_bunrui(int hinsi, int bunrui) {
++	return (Class[hinsi][bunrui].id==NULL)? 
++		NullStr: (const char *)Class[hinsi][bunrui].id;
++}
++
++///	Get all bunrui
++///	@param hinsi Index of hinsi.
++///	@param list [out]List of bunrui. It ranges from 1 to return num-1.
++///	@return Nunber of list items.
++int ext_get_all_bunrui(int hinsi, const char ** list) {
++	int i;
++	*list++ = NullStr;
++	for (i=1 ; Class[hinsi][i].id!=NULL && i<=CLASSIFY_NO; i++) {
++		*list++ = Class[hinsi][i].id;
++	}
++	return i;
++}
++
++///	Get katuyou1 string.
++///	@param katuyou1 Index of katuyou1.
++///	@return String of katuyou1. if index is wrong, return null string.
++const char * ext_get_katuyou1(int katuyou1) {
++	return (Type[katuyou1].name==NULL)? 
++		NullStr: (const char *)Type[katuyou1].name;
++}
++
++///	Get all katuyou1
++///	@param list [out]List of katuyou1. It ranges from 1 to return num-1.
++///	@return Nunber of list items.
++int ext_get_all_katuyou1(const char ** list) {
++	int i;
++	*list++ = NullStr;
++	for (i=1 ; Type[i].name!=NULL && i<TYPE_NO; i++) {
++		*list++ = Type[i].name;
++	}
++	return i;
++}
++
++///	Get katuyou2 string.
++///	@param katuyou1 Index of katuyou1.
++///	@param katuyou2 Index of katuyou2.
++///	@return String of katuyou2. if index is wrong, return null string.
++const char * ext_get_katuyou2(int katuyou1, int katuyou2) {
++	return (Form[katuyou1][katuyou2].name==NULL)? 
++		NullStr: (const char *)Form[katuyou1][katuyou2].name;
++}
++
++///	Get all katuyou2
++///	@param katuyou2 Index of katuyou2.
++///	@param list [out]List of katuyou2. It ranges from 1 to return num-1.
++///	@return Nunber of list items.
++int ext_get_all_katuyou2(int katuyou1, const char ** list) {
++	int i;
++	*list++ = NullStr;
++	for (i=1 ; Form[katuyou1][i].name!=NULL && i<FORM_NO; i++) {
++		*list++ = Form[katuyou1][i].name;
++	}
++	return i;
++}
++
++///	Get posible max number of params.
++///	Those index ranges from 1 to return num-1. 
++void ext_get_maxidx(int *pmax_hinsi, int *pmax_bunrui, 
++	int *pmax_katuyou1, int *pmax_katuyou2) {
++	*pmax_hinsi = CLASSIFY_NO+1;
++	*pmax_bunrui = CLASSIFY_NO+1;
++	*pmax_katuyou1 = TYPE_NO;
++	*pmax_katuyou2 = FORM_NO;
++}
++
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/ext_api.h juman-7.01/lib/ext_api.h
+--- B:/msys64/tmp/juman-7.01/lib/ext_api.h	Thu Jan  1 00:00:00 1970
++++ juman-7.01/lib/ext_api.h	Thu Sep 21 14:43:22 2017
+@@ -0,0 +1,129 @@
++#ifndef EXT_API_H
++#define EXT_API_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#define DEF_MAX_ITEMS	(1000)
++
++typedef struct ext_mrph_t {
++	const char * midasi1;
++	const char * yomi;
++	const char * midasi2;
++	int hinsi;
++	int bunrui;
++	int katuyou1;
++	int katuyou2;
++} EXT_MRPH_T;
++
++typedef enum ext_res_code {
++	EXT_SUCCESS = 0,
++	EXT_MRPH_BUFF_OVER,
++	EXT_WORD_BUFF_OVER,
++	EXT_ERROR = 100,
++	EXT_RC_ERROR,
++	EXT_MALLOC_ERROR,
++	EXT_FILE_NOT_EXISTS,
++	EXT_ANA_ERROR,
++} EXT_RES_CODE;
++
++///	Set encoding
++///	It must be called before ext_init.
++///	If specified wrong encoding name, error will occure in ext_init.
++/// @param s_encoding Comma separated string of input and output encoding.
++///	If comma does not exist, both input and output encoding considered this value.
++///	If NULL or null string, considered same as inner encoding and will not do encoding.
++extern void ext_set_encoding(const char *s_encoding);
++
++///	Initialize lib
++///	@param s_rcfile	Path to jumanrc
++///	@param word_buf_size Word buffer size. It is copied midasi1, yomi, and midasi2.
++///	@param max_mrphs Morpheme buffer size in number. 
++///	@return 
++///	- EXT_SUCCESS:	Success 
++///	- EXT_RC_ERROR:	Resource file error.
++///	- EXT_MALLOC_ERROR:	Cannot allocate memory.
++extern EXT_RES_CODE ext_init(const char *s_rcfile, size_t word_buf_size, int max_mrphs);
++
++///	Close extlib
++extern void ext_close();
++	
++///	Get input buffer to write.
++///	@param psize [out]Buffer size.
++///	@return Buffer address.
++extern char * ext_get_input_buff(size_t *psize);
++
++///	Get morpheme buffer to read.
++///	@return Buffer address.
++extern EXT_MRPH_T * ext_get_mrph_buff();
++
++///	Analyze with best path
++///	@return 
++///	- EXT_SUCCESS:	Success 
++///	- EXT_ERROR:	Error
++extern EXT_RES_CODE ext_analyze();
++
++///	Get result in mopheme buffer
++///	@param pnum_mrphs [out]Number of mopheme in buffer
++///	@return 
++///	- EXT_SUCCESS:	Put all morpheme.
++///	- EXT_WORD_BUFF_OVER:	Word buffer is not enough. Call more to get all morpheme.
++///	- EXT_MRPH_BUFF_OVER:	Morpheme buffer is not enough. Call more to get all morpheme.
++extern EXT_RES_CODE ext_get_result(int *pnum_mrphs);
++
++///	Get hinsi string.
++///	@param hinsi Index of hinsi.
++///	@return String of bunrui. if index is wrong, return null string.
++extern const char * ext_get_hinsi(int hinsi);
++
++///	Get all hinsi
++///	@param list [out]List of hinsi. It ranges from 1 to return num-1.
++///	@return Nunber of list items.
++extern int ext_get_all_hinsi(const char ** list);
++
++///	Get bunrui string.
++///	@param hinsi Index of hinsi.
++///	@param bunrui Index of bunrui.
++///	@return String of bunrui. if index is wrong, return null string.
++extern const char * ext_get_bunrui(int hinsi, int bunrui);
++
++///	Get all bunrui
++///	@param hinsi Index of hinsi.
++///	@param list [out]List of bunrui. It ranges from 1 to return num-1.
++///	@return Nunber of list items.
++extern int ext_get_all_bunrui(int hinsi, const char ** list);
++
++///	Get katuyou1 string.
++///	@param katuyou1 Index of katuyou1.
++///	@return String of katuyou1. if index is wrong, return null string.
++extern const char * ext_get_katuyou1(int katuyou1);
++
++///	Get all katuyou1
++///	@param list [out]List of katuyou1. It ranges from 1 to return num-1.
++///	@return Nunber of list items.
++extern int ext_get_all_katuyou1(const char ** list);
++
++///	Get katuyou2 string.
++///	@param katuyou1 Index of katuyou1.
++///	@param katuyou2 Index of katuyou2.
++///	@return String of katuyou2. if index is wrong, return null string.
++extern const char * ext_get_katuyou2(int katuyou1, int katuyou2);
++
++///	Get all katuyou2
++///	@param katuyou2 Index of katuyou2.
++///	@param list [out]List of katuyou2. It ranges from 1 to return num-1.
++///	@return Nunber of list items.
++extern int ext_get_all_katuyou2(int katuyou1, const char ** list);
++
++///	Get posible max number of params.
++///	Those index ranges from 1 to return num-1. 
++extern void ext_get_maxidx(int *pmax_hinsi, int *pmax_bunrui, 
++	int *pmax_katuyou1, int *pmax_katuyou2);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif	//	EXT_API_H
++
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/iotool.c juman-7.01/lib/iotool.c
+--- B:/msys64/tmp/juman-7.01/lib/iotool.c	Tue Oct 18 16:19:24 2011
++++ juman-7.01/lib/iotool.c	Wed Sep 27 08:24:25 2017
+@@ -12,6 +12,14 @@
+ 
+ #include	<juman.h>
+ #define         DEF_GRAM_FILE           "文法ファイル"
++
++#ifdef _WIN32
++#ifdef RC_DEFAULT
++#undef RC_DEFAULT
++#define RC_DEFAULT "C:\\ProgramData\\juman\\jumanrc"
++#endif
++#endif
++
+ /*
+ ------------------------------------------------------------------------------
+ 	GLOBAL:
+@@ -21,6 +29,7 @@
+ 
+ extern char	*ProgName;
+ FILE		*Jumanrc_Fileptr;
++extern char	    Jumanrc_Dir[FILENAME_MAX];
+ extern char            Jumangram_Dirname[FILENAME_MAX];  /*k.n*/
+ extern int             LineNoForError, LineNo;
+ 
+@@ -73,8 +82,10 @@ FILE *pathfopen(char *filename, char *mo
+ {
+      FILE	*fp;
+ 
+-     strcpy(filename_path, path);
+-     strcat(filename_path, filename);
++     if(!IS_ABS_PATH(filename)) {
++        strcpy(filename_path, path);
++        strcat(filename_path, filename);
++    }
+ 
+      return (fp = fopen(filename_path, mode));
+ }
+@@ -222,7 +233,7 @@ void error(int errno, char *msg, ...)
+ {
+      char *str;
+      va_list ap;
+-
++     
+      if (Cha_stderr == NULL)
+ 	 Cha_stderr = stderr;
+ 
+@@ -510,10 +521,12 @@ void set_jumanrc_fileptr(char *option_rc
+ 	$HOME/.jumanrc
+ 	→ rcfileがなくてもよい
+     */
++    char * s_path = "";
+ 
+     char *user_home_ptr, *getenv(), filename[FILENAME_MAX];
+ 
+-    if (option_rcfile) {
++    if (option_rcfile!=NULL && option_rcfile[0]!=0) {
++    s_path = option_rcfile;
+ 	if ((Jumanrc_Fileptr = fopen(option_rcfile, "r")) == NULL) {
+ 	    fprintf(stderr, "not found <%s>.\n", option_rcfile);
+ 	    exit(0);
+@@ -534,9 +547,11 @@ void set_jumanrc_fileptr(char *option_rc
+ 	else
+ 	    sprintf(filename, "%s/.jumanrc" , user_home_ptr);
+ #endif
+-	if (filename[0] == '\0' || (Jumanrc_Fileptr = fopen(filename, "r")) == NULL) {
++    s_path = filename;
++    if (filename[0] == '\0' || (Jumanrc_Fileptr = fopen(filename, "r")) == NULL) {
+ 	    if (look_rcdefault_p) {
+ #ifdef RC_DEFAULT
++        s_path = RC_DEFAULT;
+ 		if ((Jumanrc_Fileptr = fopen(RC_DEFAULT ,"r")) == NULL) {
+ 		    if (exit_rc_notfound_p) {
+ 			fprintf(stderr, 
+@@ -557,6 +572,30 @@ void set_jumanrc_fileptr(char *option_rc
+ 	    }
+ 	}
+      }
++    //  Set Jumanrc_Dir
++    Jumanrc_Dir[0] = 0;
++    if(NULL!=Jumanrc_Fileptr) {
++        int pos;
++        char *p_c;
++        char abs_path[FILENAME_MAX];
++        if( !IS_ABS_PATH(s_path)) {
++            getcwd(abs_path, sizeof(abs_path));
++            strncat(abs_path, "/", sizeof(abs_path));
++            strncat(abs_path, s_path, sizeof(abs_path));
++            abs_path[sizeof(abs_path)-1] = 0;
++            s_path = abs_path;
++        }
++        Jumanrc_Dir[sizeof(Jumanrc_Dir)-1] = 0;
++        strncpy(Jumanrc_Dir, s_path, sizeof(Jumanrc_Dir));
++        if(Jumanrc_Dir[sizeof(Jumanrc_Dir)-1]) {
++            fprintf(stderr, "Path to jumanrc is too long.\n");
++            exit(0);
++        }
++		pos = strlen(Jumanrc_Dir)-1;
++		p_c = (char *)Jumanrc_Dir + pos;
++		for(; pos>0; pos--, p_c--) if(*p_c=='\\' || *p_c=='/') break;
++        *p_c = 0;
++    }
+ }
+ 
+ /*
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/juman.h juman-7.01/lib/juman.h
+--- B:/msys64/tmp/juman-7.01/lib/juman.h	Mon Dec 15 09:47:28 2014
++++ juman-7.01/lib/juman.h	Tue Sep 26 13:38:46 2017
+@@ -497,3 +497,25 @@ unsigned char	*hantozen(unsigned char *s
+ /* for edr-dic */
+ void check_edrtable(MRPH *mrph_p, CELL *x);
+ 
++//  for convert encoding.
++extern void set_encoding_opt(const char * s_encoding);
++extern char * get_input_buff(size_t *psize);
++extern void enc_fprintf(FILE * stream, const char * format, ...);
++
++#ifdef _WIN32
++#define GetPrivateProfileString( lpAppName, lpKeyName, lpDefault, lpReturnedString, nSize, lpFileName ) { \
++	if( strcmp("C:\\juman\\dic", lpDefault)==0 ) { \
++		int pos; char *p_c; \
++		GetModuleFileName( NULL, lpReturnedString, nSize); \
++		pos = strlen(lpReturnedString)-1; \
++		p_c = (char *)lpReturnedString + pos; \
++		for(; pos>0; pos--, p_c--) if(*p_c=='\\' || *p_c=='/') break; \
++		*p_c = 0; \
++	} else { \
++		*(char *)lpReturnedString = 0; \
++	} \
++}
++#endif
++
++//  s_path is absolute path?
++#define IS_ABS_PATH(s_path) ( *(s_path)=='/' || *(s_path)=='\\' || *(s_path+1)==':')
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/juman_lib.c juman-7.01/lib/juman_lib.c
+--- B:/msys64/tmp/juman-7.01/lib/juman_lib.c	Mon Dec 15 09:48:31 2014
++++ juman-7.01/lib/juman_lib.c	Tue Sep 26 13:39:17 2017
+@@ -90,8 +90,10 @@
+ #include <config.h>
+ #endif
+ 
++#include <sys/stat.h>
+ #include	<juman.h>
+ #include	<const.h>
++#include	"encoder.h"
+ 
+ /*
+ ------------------------------------------------------------------------------
+@@ -140,11 +142,11 @@ DIC_FILES               DicFile;
+ 
+ COST_OMOMI       	cost_omomi;    
+ char             	Jumangram_Dirname[FILENAME_MAX]; 
+-extern FILE		*Jumanrc_Fileptr;
+ int              	LineNo;
+ int     		LineNoForError;       /* k.n */
+ 
+ char			pat_buffer[50000];
++char	    Jumanrc_Dir[FILENAME_MAX];
+ 
+ /*
+ ------------------------------------------------------------------------------
+@@ -189,6 +191,7 @@ int             prolong_ng_bunrui4_1, pr
+ int             jiritsu_num;
+ int             p_buffer_num;
+ CONNECT_COST	connect_cache[CONNECT_MATRIX_MAX];
++char	encoding_Opt[ENC_NAME_LEN * 2];
+ 
+ /* MRPH_BUFFER_MAX の制限を撤廃，動的にメモリ確保 */
+ int		 mrph_buffer_max = 0;
+@@ -209,6 +212,8 @@ U_CHAR		yomi[MIDASI_MAX];    /* 活用�
+ extern COST_OMOMI       cost_omomi;     /*k.n*/
+ extern char             Jumangram_Dirname[FILENAME_MAX];  /*k.n*/
+ 
++extern char	    *Jumanrc_FilePath;
++ENCODER_T *	p_encoder = NULL;
+ /*
+ ------------------------------------------------------------------------------
+ 	prototype definition of functions       >>> changed by T.Nakamura <<<
+@@ -257,6 +262,9 @@ int	pos_right_process(int position);
+ int	check_connect(int pos_start, int m_num, char opt);
+ int	juman_sent(void);
+ 
++static BOOL resolve_path(char *path);
++#define fprintf enc_fprintf
++
+ /*
+ ------------------------------------------------------------------------------
+ 	PROCEDURE: <changeDictionary>          >>> changed by T.Nakamura <<<
+@@ -364,6 +372,7 @@ BOOL juman_init_rc(FILE *fp)
+ 		return FALSE;
+ 	    } else {
+ 		strcpy(Jumangram_Dirname , _Atom(cell2));
++		if( FALSE==resolve_path(Jumangram_Dirname) ) return FALSE;
+ 		grammar(NULL);
+ 		katuyou(NULL);
+ 		connect_table(NULL);
+@@ -383,6 +392,7 @@ BOOL juman_init_rc(FILE *fp)
+ 		    error(ConfigError, "Too many dictionary files.", EOA);
+ 		else {
+ 		    strcpy(dic_file_name, _Atom(car(cell2)));
++			if( FALSE==resolve_path(dic_file_name) ) return FALSE;
+ 		    if ((endchar(dic_file_name)) != '/')
+ 			strcat(dic_file_name, "/");
+ 		    cell2 = cdr(cell2);
+@@ -437,7 +447,19 @@ BOOL juman_init_rc(FILE *fp)
+ 	/* 未定義語コスト (3.4以降不要)
+ 	else if (!strcmp("未定義語品詞", _Atom(car(cell1))));
+ 	*/
+-    }
++	}
++
++	if(NULL==(p_encoder = encoder_new(String, LENMAX, NULL, BUFSIZE))) {
++		fprintf(stderr, "Cannot open encoder.\n");
++		return FALSE;
++	} else {
++		char *s_inner_encoding = "UTF-8";
++		if(DEF_GRAM_FILE[0]==0x95) s_inner_encoding = "SHIFT_JIS";
++		if(!encoder_set_encoding(p_encoder, s_inner_encoding, encoding_Opt)) {
++			encoder_delete(p_encoder);
++			return FALSE;
++		}
++	}
+     return TRUE;
+ }
+ 
+@@ -518,7 +540,8 @@ BOOL juman_close(void)
+ 
+   free(rensetu_tbl);
+   free(rensetu_mtr);
+-
++  encoder_delete(p_encoder);
++  
+   return TRUE;
+ }
+ 
+@@ -2397,6 +2420,7 @@ int juman_sent(void)
+ 	process_buffer_max += BUFFER_BLOCK_SIZE;
+     }
+ 
++	encoder_convert(p_encoder, ENC_IN);
+     length = strlen(String);
+ 
+     if (length == 0) return FALSE;	/* 空行はスキップ */
+@@ -2549,3 +2573,40 @@ int juman_sent(void)
+ 
+     return TRUE;
+ }
++
++static BOOL resolve_path(char *path) {
++	char rcdir[FILENAME_MAX];	//	 < BUFFSIZE(1025)
++	struct stat status;
++	if( !IS_ABS_PATH(path) ) {
++		rcdir[sizeof(rcdir)-1] = 0;
++		strncpy(rcdir, Jumanrc_Dir, sizeof(rcdir));
++		strncat(rcdir, "/", sizeof(rcdir));
++		strncat(rcdir, path, sizeof(rcdir));
++		if(rcdir[sizeof(rcdir)-1]) {
++			fprintf(stderr, "The path is too long.(%s)\n", path);
++			return FALSE;
++		}
++		strcpy(path, rcdir);
++	}
++	if(stat(path, &status)) {
++		fprintf(stderr, "Cannot get file status(%s).\n", path);
++		return FALSE;
++	}
++	return TRUE;
++}
++
++void set_encoding_opt(const char * s_encoding) {
++	strncpy(encoding_Opt, s_encoding, sizeof(encoding_Opt));
++	encoding_Opt[sizeof(encoding_Opt)-1] = 0;
++}
++
++char * get_input_buff(size_t *psize) {
++	return encoder_getbuff(p_encoder, ENC_IN, ENC_WRITE, psize);
++}
++
++void enc_fprintf(FILE * stream, const char * format, ...) {
++	va_list va;
++	va_start(va, format);
++	encoder_vprintf(p_encoder, stream, format, va);
++	va_end(va);
++}
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/Makefile.in juman-7.01/lib/Makefile.in
+--- B:/msys64/tmp/juman-7.01/lib/Makefile.in	Mon Dec 15 09:50:09 2014
++++ juman-7.01/lib/Makefile.in	Mon Sep 25 19:15:52 2017
+@@ -72,8 +72,11 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
+ libjuman_la_LIBADD =
+ am_libjuman_la_OBJECTS = connect.lo getid.lo grammar.lo iotool.lo \
+ 	katuyou.lo lisp.lo pat.lo patfile.lo zentohan.lo juman_lib.lo \
+-	japanese.lo
++	japanese.lo encoder.lo ext_api.lo
+ libjuman_la_OBJECTS = $(am_libjuman_la_OBJECTS)
++libjuman_OBJECTS = connect.o getid.o grammar.o iotool.o \
++							katuyou.o lisp.o pat.o patfile.o zentohan.o juman_lib.o \
++							japanese.o encoder.o ext_api.o
+ libjuman_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+ 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+ 	$(libjuman_la_LDFLAGS) $(LDFLAGS) -o $@
+@@ -209,9 +212,10 @@ target_alias = @target_alias@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-include_HEADERS = juman.h juman_pat.h
++include_HEADERS = juman.h juman_pat.h ext_api.h
+ lib_LTLIBRARIES = libjuman.la
+-libjuman_la_SOURCES = connect.c const.h getid.c grammar.c iotool.c katuyou.c lisp.c pat.c patfile.c zentohan.c juman.h juman_lib.c juman_pat.h japanese.c
++libjuman_la_SOURCES = connect.c const.h getid.c grammar.c iotool.c katuyou.c lisp.c pat.c patfile.c zentohan.c juman.h juman_lib.c juman_pat.h japanese.c \
++											encoder.h encoder.c ext_api.h ext_api.c
+ libjuman_la_LDFLAGS = -version-info @LIBJUMAN_VERSION_INFO@
+ all: all-am
+ 
+@@ -281,6 +285,13 @@ clean-libLTLIBRARIES:
+ libjuman.la: $(libjuman_la_OBJECTS) $(libjuman_la_DEPENDENCIES) 
+ 	$(libjuman_la_LINK) -rpath $(libdir) $(libjuman_la_OBJECTS) $(libjuman_la_LIBADD) $(LIBS)
+ 
++libjuman.so: $(libjuman_OBJECTS)
++	$(CC) -shared -Wl,--enable-auto-image-base $(LDFLAGS) \
++		-Wl,--enable-auto-image-base -Xlinker --out-implib -Xlinker $@ \
++		-o $@ $(libjuman_OBJECTS) $(LIBS)
++		cp $@ $(DESTDIR)$(libdir)
++
++
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)
+ 
+@@ -298,6 +309,8 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pat.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/patfile.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zentohan.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/encoder.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ext_api.Plo@am__quote@
+ 
+ .c.o:
+ @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

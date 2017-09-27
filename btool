@@ -1,84 +1,147 @@
-#!/usr/bin/bash +x
+#!/usr/bin/bash
+set -e
+
+is_win=false
+# if MinGW
+if [ "$COMSPEC" != "" ]; then
+	is_win=true
+fi
+
+# For systems as like UNIX
+prefix=
+ldflags=
+libs=
+cflags=
+PYTHON=python3
 
 juman_url=http://nlp.ist.i.kyoto-u.ac.jp/nl-resource/juman/juman-7.01.tar.bz2
+archive=juman-7.01.tar.bz2
 juman=juman-7.01
 juman_dir=${juman}
-patch=ext_${juman}_01.patch
-#ldflags=
-ldflags="-Wl,-Bstatic"
-#libs=
-libs="-lregex -ltre -lintl -liconv"
-dist_name=juman-7.01_patched-win64
-#dist=$HOME/local
-dist=/tmp/${dist_name}
-distzip=${dist_name}.zip
+patch=ext_${juman}_02.patch
+dist_name=juman-7.01_ext
+dist_dir=$PWD/dist
+dist=${dist_dir}/${dist_name}
+pymod_dir=python_module
+
+# For Windows. (MinGW)
+if $is_win; then
+	prefix=${dist}
+	ldflags="-Wl,-Bstatic"
+	libs="-lregex -ltre -lintl -liconv"
+fi
+
+# configure to install.
+# @param dist_dir for prefix
+# @param flags for CFLAGS
+function build_all() {
+	cd $juman_dir
+	if $is_win; then
+		mkdir -p $1
+		rm -rf $1/*
+		echo ./configure --prefix=$1 --bindir=$1 \
+			LDFLAGS="${ldflags}" LIBS="${libs}" CFLAGS="$2"
+		./configure --prefix=$1 --bindir=$1 \
+			LDFLAGS="${ldflags}" LIBS="${libs}" CFLAGS="$2"
+		
+		make clean all install
+		cd lib
+		make libjuman.so
+		cd ..
+	else
+		./configure --prefix=$1 \
+			LDFLAGS="${ldflags}" LIBS="${libs}" CFLAGS="$2"
+		make clean all install
+	fi
+	cd ..
+}
+
+# Align distribute director for Windows
+# @param dist dir
+function align() {
+	if $is_win; then
+		curdir=$PWD
+		cd $1
+		mkdir dics
+		mv share/juman/doc/manual.pdf .
+		mv share/juman/*dic dics
+		rm -rf share
+		mv libexec/juman/* libexec
+		rm -rf libexec/juman
+		cp ${curdir}/jumanrc.win ./jumanrc
+		cp ${curdir}/juman-i.bat .
+		rm -rf ${curdir}/$pymod_dir/dics
+		cp -r dics ${curdir}/$pymod_dir
+		cd $curdir
+	fi
+}
 
 for cmd in $*; do
 
 if [ $cmd = "load" ]; then
-	wget ${juman_url}
-	tar xf juman-7.01.tar.bz2
-
-elif [ $cmd = "patch" ]; then
+	rm -rf $juman_dir
+	tar xf archives/${archive}
 	cd $juman_dir
 	patch -p1 < ../${patch}
 	cd ..
 
 elif [ $cmd = "build" ]; then
-	cd $juman_dir
-	mkdir -p ${dist}
-	rm -rf ${dist}/*
-	./configure --prefix=${dist} --bindir=${dist} \
-				LDFLAGS="${ldflags}" LIBS="${libs}" \
-				CFLAGS=-Ofast
-	make clean all install
-	cd ..
+	build_all $prefix "${cflags} -Ofast"
 
-elif [ $cmd = "debug" ]; then
-	cd $juman_dir
-	./configure --prefix=${dist}/debug --bindir=${dist}/debug \
-				LDFLAGS="${ldflags}" LIBS="${libs}" \
-				CFLAGS="-g -O0"
-	make clean all install
-	cd ..
+elif [ $cmd = "align" ]; then
+	if $is_win; then
+		align $dist
+	else
+		echo "No needs to align."
+	fi
 
+# For develop
 elif [ $cmd = "install" ]; then
 	cd $juman_dir
 	make install
 	cd ..
 
-elif [ $cmd = "align" ]; then
-	curdir=$PWD
-	cd $dist
-	mkdir dics
-	mv share/juman/doc/manual.pdf .
-	mv share/juman/*dic dics
-	rm -rf share
-	mv include etc
-	mv lib etc
-	mv libexec etc
-	cp ${curdir}/jumanrc.win ./jumanrc
-	cp ${curdir}/juman-i.bat .
-	cd $curdir
+elif [ $cmd = "build-debug" ]; then
+	n_dist=${dist}_debug
+	build_all ${n_dist} "${cflags} -g -O0"
+	align ${n_dist}
+
+elif [ $cmd = "build-w64" ]; then
+	n_dist=${dist}_win64
+	build_all ${n_dist} "${cflags} -m64 -Ofast"
+	align ${n_dist}
+	cp ${n_dist}/lib/libjuman.so $pymod_dir/libjuman64.so
+
+elif [ $cmd = "build-w32" ]; then
+	n_dist=${dist}_win32
+	build_all ${n_dist} "${cflags} -m32 -Ofast"
+	align ${n_dist}
+	cp ${n_dist}/lib/libjuman.so $pymod_dir/libjuman32.so
 
 elif [ $cmd = "diff" ]; then
-	diff_opt="-rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.exe -x Makefile"
-	fromdir=juman-7.01
-	todir=/tmp/juman-7.01
+	diff_opt="-rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile"
+	fromdir=/tmp/juman-7.01
+	todir=juman-7.01
 	/b/bin/diff ${diff_opt} ${fromdir} ${todir} > ${patch}
 
-elif [ $cmd = "zip" ]; then
-	cp copying.txt $dist
-	curdir=$PWD
-	cd $dist
-	cd ..
-	zip -r ${curdir}/${distzip} ${dist_name}
-	cd $curdir
-
 elif [ $cmd = "clean-dist" ]; then
-	rm -rf $dist
+	rm -rf ${dist_dir}/*
+
+elif [ $cmd = "pymod" ]; then
+	echo "nothing to do."
+
+elif [ $cmd = "zip" ]; then
+	rm -f dist/*.zip
+	cp copyings/copying.pymod.txt ${pymod_dir}/copying.txt
+	$PYTHON setup.py sdist
+	cp copyings/copying.exe.txt ${dist}_win64/copying.txt
+	cp copyings/copying.exe.txt ${dist}_win32/copying.txt
+	cd dist
+	zip -r ${dist_name}_win64.zip ${dist_name}_win64
+	zip -r ${dist_name}_win32.zip ${dist_name}_win32
+	cd ..
 else
-	echo "Unknown command: " $cmd
+	echo "Unknown command:" $cmd
 fi
 
 done
