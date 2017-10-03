@@ -38,11 +38,11 @@ if jumany.open_lib(args.rcf) is False:
     print(jumany.get_error_msg())
     sys.exit(0)
 
-while 1:
+while True:
     Mrphs = jumany.analyze(sys.stdin.readline(), True)
     if Mrphs is None:
         print(jumany.get_error_msg())
-        sys.exit(0)
+        continue
     for (Midasi1, Yomi, Midasi2, Hinsi, Bunrui, Katuyou1, Katuyou2) in Mrphs:
         mrph = [
             Midasi1, Yomi, Midasi2, jumany.get_hinsi(Hinsi),

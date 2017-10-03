@@ -1,0 +1,5 @@
+include scripts/custom_build.py
+include scripts/build_ext.sh
+include archives/juman-7.01_subset.tar.gz
+include archives/ext_juman-7.01_03.patch
+include test/test*.py

@@ -6,11 +6,11 @@ Python interface for JUMAN Morphological analysis system.
 
 Requirement
 -----------
-- Windows 64bit system only
+- POSIX system, Windows 64bit system
 - Python 3.3 or above
 
-Install
--------
+Installation
+------------
 ```python setup.py install
 ```
 
@@ -28,9 +28,9 @@ True
 >>> jumany.analyze("吾輩は猫である。\nまだ名前は無い。", True, True)
 ['吾輩', 'は', '猫', 'である', '。', 'まだ', '名前', 'は', '無い', '。']
 
-See `jumany page <https://github.com/yujakudo/jumany/python_module>` for more details.
+See `jumany page <https://github.com/yujakudo/jumany/python_module>` for more details in Japanese.
 
 Licenses
 --------
 - Python scripts: BSD License
-- Shared library for Windows: BSD License, but libraries under LGPL are linked.
+- Pre-built libraries for Windows: BSD License, but libraries under LGPL are linked.

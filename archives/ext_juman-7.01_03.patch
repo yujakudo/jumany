@@ -152,7 +152,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      fprintf(stderr, "             -S : start JUMAN server\n");
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/encoder.c juman-7.01/lib/encoder.c
 --- B:/msys64/tmp/juman-7.01/lib/encoder.c	Thu Jan  1 00:00:00 1970
-+++ juman-7.01/lib/encoder.c	Fri Sep 22 14:48:40 2017
++++ juman-7.01/lib/encoder.c	Mon Oct  2 20:41:39 2017
 @@ -0,0 +1,245 @@
 +#include <stdlib.h>
 +#include <stdarg.h>
@@ -333,7 +333,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +
 +	int i;
 +	if( pencodings[0][0]==0 || pencodings[1][0]==0
-+		|| 0==stricmp(pencodings[0], pencodings[1])) {
++		|| 0==strcasecmp(pencodings[0], pencodings[1])) {
 +
 +		//	No needs to convert. both buffers are same.
 +		if(NULL==pbuffs[0] && NULL==pbuffs[1]) {
@@ -512,8 +512,8 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +#endif	//	ENCODER_H
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/ext_api.c juman-7.01/lib/ext_api.c
 --- B:/msys64/tmp/juman-7.01/lib/ext_api.c	Thu Jan  1 00:00:00 1970
-+++ juman-7.01/lib/ext_api.c	Thu Sep 21 17:13:44 2017
-@@ -0,0 +1,270 @@
++++ juman-7.01/lib/ext_api.c	Mon Oct  2 23:29:59 2017
+@@ -0,0 +1,268 @@
 +#include <stdlib.h>
 +#include <stdio.h>
 +#include <string.h>
@@ -535,7 +535,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +char * NullStr = "";
 +
 +extern FILE * Jumanrc_Fileptr;
-+extern void set_jumanrc_fileptr(char *option_rcfile, int look_rcdefault_p, int exit_rc_notfound_p);
++extern BOOL set_jumanrc_fileptr_min(const char *option_rcfile);
 +extern BOOL	juman_init_rc(FILE *fp);
 +extern void juman_init_etc(void);
 +extern int	juman_close(void);
@@ -574,9 +574,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +///	- EXT_RC_ERROR:	Resource file error.
 +///	- EXT_MALLOC_ERROR:	Cannot allocate memory.
 +EXT_RES_CODE ext_init(const char *s_rcfile, size_t word_buf_size, int max_mrphs) {
-+	
-+	set_jumanrc_fileptr((char *)s_rcfile, TRUE, FALSE);
-+	if(Jumanrc_Fileptr==NULL)	return EXT_FILE_NOT_EXISTS;
++	if(FALSE==set_jumanrc_fileptr_min(s_rcfile))	return EXT_FILE_NOT_EXISTS;
 +	if(FALSE==juman_init_rc(Jumanrc_Fileptr)) return EXT_RC_ERROR;
 +    juman_init_etc();
 +#ifdef HAVE_REGEX_H
@@ -919,7 +917,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/iotool.c juman-7.01/lib/iotool.c
 --- B:/msys64/tmp/juman-7.01/lib/iotool.c	Tue Oct 18 16:19:24 2011
-+++ juman-7.01/lib/iotool.c	Wed Sep 27 08:24:25 2017
++++ juman-7.01/lib/iotool.c	Tue Oct  3 01:16:07 2017
 @@ -12,6 +12,14 @@
  
  #include	<juman.h>
@@ -935,7 +933,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  /*
  ------------------------------------------------------------------------------
  	GLOBAL:
-@@ -21,6 +29,7 @@
+@@ -21,12 +29,15 @@
  
  extern char	*ProgName;
  FILE		*Jumanrc_Fileptr;
@@ -943,7 +941,15 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  extern char            Jumangram_Dirname[FILENAME_MAX];  /*k.n*/
  extern int             LineNoForError, LineNo;
  
-@@ -73,8 +82,10 @@ FILE *pathfopen(char *filename, char *mo
+ int Cha_errno = 0;
+ FILE 		*Cha_stderr = NULL;
+ 
++static BOOL set_jumanrc_dir(const char * s_path);
++    
+ /*
+ ------------------------------------------------------------------------------
+ 	FUNCTION:
+@@ -73,8 +84,10 @@ FILE *pathfopen(char *filename, char *mo
  {
       FILE	*fp;
  
@@ -956,7 +962,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  
       return (fp = fopen(filename_path, mode));
  }
-@@ -222,7 +233,7 @@ void error(int errno, char *msg, ...)
+@@ -222,7 +235,7 @@ void error(int errno, char *msg, ...)
  {
       char *str;
       va_list ap;
@@ -965,7 +971,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
       if (Cha_stderr == NULL)
  	 Cha_stderr = stderr;
  
-@@ -510,10 +521,12 @@ void set_jumanrc_fileptr(char *option_rc
+@@ -510,10 +523,12 @@ void set_jumanrc_fileptr(char *option_rc
  	$HOME/.jumanrc
  	→ rcfileがなくてもよい
      */
@@ -979,7 +985,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  	if ((Jumanrc_Fileptr = fopen(option_rcfile, "r")) == NULL) {
  	    fprintf(stderr, "not found <%s>.\n", option_rcfile);
  	    exit(0);
-@@ -534,9 +547,11 @@ void set_jumanrc_fileptr(char *option_rc
+@@ -534,9 +549,11 @@ void set_jumanrc_fileptr(char *option_rc
  	else
  	    sprintf(filename, "%s/.jumanrc" , user_home_ptr);
  #endif
@@ -992,37 +998,56 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  		if ((Jumanrc_Fileptr = fopen(RC_DEFAULT ,"r")) == NULL) {
  		    if (exit_rc_notfound_p) {
  			fprintf(stderr, 
-@@ -557,6 +572,30 @@ void set_jumanrc_fileptr(char *option_rc
+@@ -557,6 +574,13 @@ void set_jumanrc_fileptr(char *option_rc
  	    }
  	}
       }
 +    //  Set Jumanrc_Dir
-+    Jumanrc_Dir[0] = 0;
 +    if(NULL!=Jumanrc_Fileptr) {
-+        int pos;
-+        char *p_c;
-+        char abs_path[FILENAME_MAX];
-+        if( !IS_ABS_PATH(s_path)) {
-+            getcwd(abs_path, sizeof(abs_path));
-+            strncat(abs_path, "/", sizeof(abs_path));
-+            strncat(abs_path, s_path, sizeof(abs_path));
-+            abs_path[sizeof(abs_path)-1] = 0;
-+            s_path = abs_path;
-+        }
-+        Jumanrc_Dir[sizeof(Jumanrc_Dir)-1] = 0;
-+        strncpy(Jumanrc_Dir, s_path, sizeof(Jumanrc_Dir));
-+        if(Jumanrc_Dir[sizeof(Jumanrc_Dir)-1]) {
++        if(FALSE==set_jumanrc_dir(s_path)) {
 +            fprintf(stderr, "Path to jumanrc is too long.\n");
 +            exit(0);
 +        }
-+		pos = strlen(Jumanrc_Dir)-1;
-+		p_c = (char *)Jumanrc_Dir + pos;
-+		for(; pos>0; pos--, p_c--) if(*p_c=='\\' || *p_c=='/') break;
-+        *p_c = 0;
 +    }
  }
  
  /*
+@@ -688,3 +712,35 @@ void cha_exit_perror(s)
+     exit(1);
+ }
+ 
++//  simplified set_jumanrc_fileptr
++BOOL set_jumanrc_fileptr_min(const char * option_rcfile) {
++	if ((Jumanrc_Fileptr = fopen(option_rcfile, "r")) == NULL) {
++        return FALSE;
++    }
++    return set_jumanrc_dir(option_rcfile);
++}
++
++//  Set jumanrc directory to global
++static BOOL set_jumanrc_dir(const char * s_path) {
++    int pos;
++    char *p_c;
++    char abs_path[FILENAME_MAX];
++    Jumanrc_Dir[0] = 0;
++    if( !IS_ABS_PATH(s_path)) {
++        getcwd(abs_path, sizeof(abs_path));
++        strncat(abs_path, "/", sizeof(abs_path));
++        strncat(abs_path, s_path, sizeof(abs_path));
++        abs_path[sizeof(abs_path)-1] = 0;
++        s_path = abs_path;
++    }
++    Jumanrc_Dir[sizeof(Jumanrc_Dir)-1] = 0;
++    strncpy(Jumanrc_Dir, s_path, sizeof(Jumanrc_Dir));
++    if(Jumanrc_Dir[sizeof(Jumanrc_Dir)-1]) {
++        return FALSE;
++    }
++    pos = strlen(Jumanrc_Dir)-1;
++    p_c = (char *)Jumanrc_Dir + pos;
++    for(; pos>0; pos--, p_c--) if(*p_c=='\\' || *p_c=='/') break;
++    *p_c = 0;
++    return TRUE;
++}
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/juman.h juman-7.01/lib/juman.h
 --- B:/msys64/tmp/juman-7.01/lib/juman.h	Mon Dec 15 09:47:28 2014
 +++ juman-7.01/lib/juman.h	Tue Sep 26 13:38:46 2017

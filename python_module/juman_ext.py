@@ -3,16 +3,16 @@
 """
 import os
 import sys
-from ctypes import *
-import ctypes.util
+from ctypes import CDLL, Structure, POINTER, byref, cast
+from ctypes import c_int, c_char_p, c_size_t, c_byte
 import re
 
-def load_lib(path: str)->CDLL:
+def load_lib(path: str):
     """ Convert to absolute path and load library """
     if path[0] != '/' and path[0] != '\\' and path[1] != ':':
         path = os.path.join(os.path.dirname(__file__), path)
     if os.path.exists(path):
-        return cdll.LoadLibrary(path)
+        return CDLL(path)
     return None
 
 LIBC = load_lib('libjuman.so')
@@ -27,7 +27,7 @@ if LIBC is None:
         print("Cannot find libjuman.so")
         sys.exit(-1)
 
-class MrphT(Structure):
+class MrphT(Structure):  # pylint: disable=R0903
     """ Type of morphese """
     _fields_ = [
         ("midasi1", c_char_p),
@@ -52,7 +52,7 @@ PYMOD_ERROR = 200
 TOO_LONG = 201
 
 # void ext_set_encoding(const char *s_encoding);
-LIBC.ext_init.restype = c_int	# temporal
+LIBC.ext_init.restype = None
 LIBC.ext_init.argtypes = (c_char_p,)
 
 # EXT_RES_CODE ext_init(const char *s_rcfile, size_t word_buf_size, int max_mrphs);
@@ -60,11 +60,11 @@ LIBC.ext_init.restype = c_int
 LIBC.ext_init.argtypes = (c_char_p, c_size_t, c_int)
 
 # void ext_close();
-LIBC.ext_close.restype = c_int	# temporal
+LIBC.ext_close.restype = None
 LIBC.ext_close.argtypes = ()
 
 # char * ext_get_input_buff(size_t *psize);
-LIBC.ext_get_input_buff.restype = c_void_p
+LIBC.ext_get_input_buff.restype = POINTER(c_byte)
 LIBC.ext_get_input_buff.argtypes = (POINTER(c_size_t),)
 
 # EXT_MRPH_T * ext_get_mrph_buff();
@@ -113,7 +113,7 @@ LIBC.ext_get_all_katuyou2.argtypes = (c_int, POINTER(c_char_p))
 
 # void ext_get_maxidx(int *pmax_hinsi, int *pmax_bunrui,
 #	int *pmax_katuyou1, int *pmax_hatuyou2);
-LIBC.ext_get_maxidx.restype = c_int	#	temporal
+LIBC.ext_get_maxidx.restype = None
 LIBC.ext_get_maxidx.argtypes = (POINTER(c_int), POINTER(c_int), POINTER(c_int), POINTER(c_int))
 
 ERRORNO = SUCCESS
@@ -162,6 +162,18 @@ def open_lib(rc_path: str = None)->bool:
     """
     global ERRORNO, _WRITE_BUF, _BUF_SIZE, _READ_BUF
     global L_HINSI, L_BUNRUI, L_KATUYOU1, L_KATUYOU2
+    ERRORNO = SUCCESS
+
+    L_HINSI = []
+    L_BUNRUI = []
+    L_KATUYOU1 = []
+    L_KATUYOU2 = []
+
+    _WRITE_BUF = None
+    _BUF_SIZE = None
+    _READ_BUF = None
+    _ENCODING = "UTF-8"
+
     if rc_path is None:
         abspath = os.path.abspath(__file__)
         rc_path = os.path.join(os.path.dirname(abspath), 'jumanrc')
@@ -172,7 +184,7 @@ def open_lib(rc_path: str = None)->bool:
     size = c_size_t()
     _WRITE_BUF = LIBC.ext_get_input_buff(byref(size))
     _BUF_SIZE = size.value
-    _WRITE_BUF = cast(_WRITE_BUF, POINTER(c_ubyte * _BUF_SIZE))
+    _WRITE_BUF = cast(_WRITE_BUF, POINTER(c_byte * _BUF_SIZE))
     _READ_BUF = LIBC.ext_get_mrph_buff()
     # Get all word of grammar
     max_param = [c_int() for i in range(4)]
@@ -207,13 +219,13 @@ def close_lib():
     """ Close juman library  """
     LIBC.ext_close()
 
-"""def set_encoding(encoding: str):
-    "" Set encoding of input text
+def set_encoding(encoding: str):
+    """ Set encoding of input text
     @param encoding String of encoding
-    ""
+    @todo need to consider working with bytes data.
+    """
     global _ENCODING
     _ENCODING = encoding
-"""
 
 def analyze(text: str, remove_space: bool = False, just_word: bool = False)->[]:
     """ Analyze sentences

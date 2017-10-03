@@ -1,13 +1,25 @@
 * Summary
 
+if exists, libjuman.so is built from followings:
+
+	JUMAN	7.01
+		URL:	http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN
+		license:	3-Clause BSD
+		main program
+
+	ext_juman-7.01_03.patch
+		URL:		https://github.com/yujakudo/jumany/
+		license:	Public domain
+		patch for JUMAN-7.10 to add extra API
+
 libjuman64.so is including followings:
 
 	JUMAN	7.01
-	URL:	http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN
-	license:	3-Clause BSD
-	main program
+		URL:	http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN
+		license:	3-Clause BSD
+		main program
 
-	ext_juman-7.01_02.patch
+	ext_juman-7.01_03.patch
 		URL:		https://github.com/yujakudo/jumany/
 		license:	Public domain
 		patch for JUMAN-7.10 to add extra API
@@ -31,12 +43,12 @@ libjuman64.so is including followings:
 		license:	LGPL
 		for libiconv, libiconv_open, liviconv_set_relocation_prefix
 
-Dictionaries in dics/dic, dics/autodic and dics/wikipediadic:
+Dictionaries in dics:
 
 	JUMAN	7.01
-	URL:	http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN
-	license:	3-Clause BSD
-  main program
+		URL:	http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN
+		license:	3-Clause BSD
+		for dic, autodic, and wikipediadic
 
 ---
 

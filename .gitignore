@@ -71,6 +71,5 @@ MANIFEST
 .vscode/
 dist/
 dics/
-test/
 juman-7.01/
 python_module/copying.txt

@@ -7,7 +7,7 @@ This package is built from the following:
 
 Executables include following patch and libraries:
 
-	ext_juman-7.02.patch
+	ext_juman-7.03.patch
 		URL:		https://github.com/yujakudo/jumany/
 		license:	Public domain
 		patch for JUMAN-7.10 to add extra API
