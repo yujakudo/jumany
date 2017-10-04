@@ -3,12 +3,12 @@ jumany setup
 """
 import sys
 import os
-import codecs
 from distutils.core import setup
 from scripts.custom_build import BuildTool
 
 # Don't insert space to be compatible shell script.
-_JUMANY_VER="0.3" # pylint: disable=C0326
+MODULE_NAME="jumany" # pylint: disable=C0326
+MODULE_VERSION="0.3" # pylint: disable=C0326
 
 _REQUIREMENT = {
     'Python': (3, 3),
@@ -18,8 +18,8 @@ _REQUIREMENT = {
 }
 
 _SET_UP_ARGS = dict(
-    name='jumany',
-    version=_JUMANY_VER,
+    name=MODULE_NAME,
+    version=MODULE_VERSION,
     description='Interface for JUMAN Morphological analysis system',
     long_description="""Python interface for
     `JUMAN <http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN>'
@@ -33,15 +33,17 @@ _SET_UP_ARGS = dict(
         'dics/*/*.pat', 'dics/*/*.mat', 'dics/*/*.dat', 'dics/*/*.tab',
         'dics/*/JUMAN.*'
     ]},
-    scripts=['scripts/jumany-i.py'],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved",
-        "Operating System :: Windows",
+        "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
-        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
         "Topic :: Scientific/Engineering",
         "Topic :: Software Development",
         "Topic :: Text Processing",
@@ -85,9 +87,10 @@ if 'package_dir' in _SET_UP_ARGS and _PACKAGE_NAME in _SET_UP_ARGS['package_dir'
     )
 
 # Set long description from README.txt
-_README = os.path.join(_PACKAGE_DIR, 'README.txt')
-if os.path.exists(_README):
-    _SET_UP_ARGS['long_description'] = codecs.open(_README, 'r', 'utf-8').read()
+# _README = os.path.join(_PACKAGE_DIR, 'README.txt')
+# if os.path.exists(_README):
+#     with open(_README, 'rb') as fp:
+#         _SET_UP_ARGS['long_description'] = fp.read().decode('utf8')
 
 # Set custom build info.
 _BUILD_INFO = None

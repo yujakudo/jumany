@@ -5,6 +5,7 @@ import os
 import sys
 import copy
 import locale
+import shlex
 import subprocess
 # for custom commands
 from distutils.errors import DistutilsError
@@ -48,7 +49,7 @@ class BuildTool:
         @param cwd Working directory
         @param shell List of shell commandline e.g. ["bash", "-c"]. Default is None.
         @param tools List of command to use in scripts.
-        @param scripts Dict. of script. A script is list of commands
+        @param scripts Dict. of script. A script is list of commandlines
         @param targets List of path of built. if relative, it from cwd
         @param test_dir String of tests directory.
         """
@@ -104,18 +105,16 @@ class BuildTool:
                 return False
         return True
 
-    def _exec_cmd(self, command_line)->bool:
+    def _exec_cmd(self, command_line: str)->bool:
         """ Execute command line """
         keys = {'cwd': self.cwd}
         if self.options['shell'] is None:
             keys['shell'] = True
-            cmd = command_line
         else:
-            cmd = [] + self.options['shell']
-            if isinstance(command_line, list):
-                command_line = " ".join(command_line)
-            cmd.append(command_line)
-        self._echo("> %s" % " ".join(cmd) if isinstance(cmd, list) else cmd)
+            command_line = self.options['shell'] % command_line
+        self._echo("> " + command_line)
+        cmd = shlex.split(command_line)
+        self._echo("splited commandline: " + repr(cmd), False)
         try:
             res = subprocess.check_output(cmd, **keys)
             self._echo(res.decode(self.encoding), False)
@@ -197,26 +196,26 @@ class CustomTest(Command):
 if __name__ == '__main__':
     _INFO_DICT = {
         'nt': {
-            'cwd': os.path.join(os.path.dirname(__file__), "../test/build_ext"),
+            'cwd': os.path.join(os.path.dirname(__file__), "../test/custom_build"),
             'scripts': {
-                'build': [["build_ext.bat", "build"]],
-                'clean': [["build_ext.bat", "clean"]],
+                'build': ["build.bat build"],
+                'clean': ["build.bat clean"],
             },
-            'targets': ['build/lib/libjuman.so'],
+            'targets': ['made.so'],
         },
         'posix': {
-            'cwd': os.path.join(os.path.dirname(__file__), ".."),
+            'cwd': os.path.join(os.path.dirname(__file__), "../test/custom_build"),
             'scripts': {
-                'build': ["scripts/build_ext.sh build"],
-                'clean': ["scripts/build_ext.sh clean"],
+                'build': ["build.sh build"],
+                'clean': ["build.sh clean"],
             },
-            'targets': ['build/lib/libjuman.so'],
+            'targets': ['made.so'],
         },
     }
     _INFO = _INFO_DICT[os.name]
     BuildTool.set_def_options(**_INFO)
     _TOOL = BuildTool()
-    if sys.argv[1] == 'clean':
+    if len(sys.argv) > 1 and sys.argv[1] == 'clean':
         _TOOL.exec_script('clean')
     else:
         _TOOL.exec_all('build')

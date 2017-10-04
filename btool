@@ -9,6 +9,7 @@ fi
 
 # Commands
 PYTHON=python3
+PIP=pip3
 DIFF=/b/bin/diff
 
 # For POSIX systems
@@ -28,7 +29,6 @@ PACKAGE_DIR=${PACKAGE}
 PATCH_FILE=${ARCHIVE_DIR}/ext_${PACKAGE}_03.patch
 DIST_NAME=${JUMAN}_ext
 DIST_DIR=dist
-PYMOD_DIR=python_module
 
 # For Windows. (MinGW)
 if $IS_WIN; then
@@ -38,11 +38,14 @@ if $IS_WIN; then
 	LIBS="-lregex -ltre -lintl -liconv"
 fi
 
-# Get version from setup.py
-eval $(grep _JUMANY_VER= setup.py)
-VERSION=${_JUMANY_VER}
-V_VERSION="v${VERSION}"
-echo "jumany" $V_VERSION
+# For Python module
+PYMOD_DIR=python_module
+PYPI_TEST_SITE=https://testpypi.python.org
+# Get module name and version from setup.py
+eval $(grep MODULE_NAME= setup.py)
+eval $(grep MODULE_VERSION= setup.py)
+V_VERSION="v${MODULE_VERSION}"
+echo $MODULE_NAME $V_VERSION
 
 # configure to install.
 # @param dist_dir for prefix
@@ -148,8 +151,8 @@ elif [ $cmd = "zip" ]; then
 	cp copyings/copying.exe.txt ${DIST_DIR}/${DIST_NAME}_win64/copying.txt
 #	cp copyings/copying.exe.txt ${DIST_DIR}/${DIST_NAME}_win32/copying.txt
 	cd ${DIST_DIR}
-	zip -r ${DIST_NAME}-${VERSION}_win64.zip ${DIST_NAME}_win64
-#	zip -r ${DIST_NAME}-${VERSION}_win32.zip ${DIST_NAME}_win32
+	zip -r ${DIST_NAME}-${MODULE_VERSION}_win64.zip ${DIST_NAME}_win64
+#	zip -r ${DIST_NAME}-${MODULE_VERSION}_win32.zip ${DIST_NAME}_win32
 	cd ..
 
 elif [ $cmd = "git-push" ]; then
@@ -160,6 +163,19 @@ elif [ $cmd = "git-tag" ]; then
 	read comm
 	git tag -a $V_VERSION -m "${comm}"
 	git push origin $V_VERSION
+
+elif [ $cmd = "pypi-test" ]; then
+	$PYTHON setup.py register -r ${PYPI_TEST_SITE}/pypi
+	$PYTHON setup.py sdist upload -r ${PYPI_TEST_SITE}/pypi
+
+elif [ $cmd = "test-pip" ]; then
+	$PYTHON -m twine upload --repository testpypi --skip-existing /mnt/z/jumany-0.3.zip
+	$PIP install --index-url ${PYPI_TEST_SITE}/simple/ $MODULE_NAME
+	$PIP test $MODULE_NAME
+
+elif [ $cmd = "pypi-upload" ]; then
+	$PYTHON setup.py register
+	$PYTHON setup.py sdist upload
 
 else
 	echo "Unknown command:" $cmd

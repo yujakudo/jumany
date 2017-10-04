@@ -23,7 +23,8 @@ def column_print(data: []):
 
 parser = argparse.ArgumentParser(
     description="""Results are shown in columns by default.
-    Specify delimiter not to show in columns."""
+    Specify delimiter not to show in columns.
+    Type 'exit' in half-width charactors to exit."""
 )
 parser.add_argument(
     '-d', dest='delimiter', nargs='?', const=' ',
@@ -39,7 +40,10 @@ if jumany.open_lib(args.rcf) is False:
     sys.exit(0)
 
 while True:
-    Mrphs = jumany.analyze(sys.stdin.readline(), True)
+    line = sys.stdin.readline()
+    if line.strip() == "exit":
+        break
+    Mrphs = jumany.analyze(line, True)
     if Mrphs is None:
         print(jumany.get_error_msg())
         continue
