@@ -1,5 +1,23 @@
-include scripts/custom_build.py
-include scripts/build_ext.sh
-include archives/juman-7.01_subset.tar.gz
-include archives/ext_juman-7.01_03.patch
-include test/test*.py
+# For setup
+include setup.cfg
+include scripts/setup_ext.py
+
+# Distribution
+include scripts/jumanrc.win
+include copyings/*.txt
+
+# tests
+include tests/*.py
+
+# Shared Library
+include scripts/config.h
+include juman-7.01/lib/*.c
+include juman-7.01/lib/*.h
+include dist/juman-*win*/lib/*.so
+
+# Dictionaries
+include dist/juman-*win64/dics/*/*.pat
+include dist/juman-*win64/dics/*/*.mat
+include dist/juman-*win64/dics/*/*.dat
+include dist/juman-*win64/dics/*/*.tab
+include dist/juman-*win64/dics/*/JUMAN.*

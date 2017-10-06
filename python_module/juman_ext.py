@@ -3,29 +3,30 @@
 """
 import os
 import sys
+import glob
 from ctypes import CDLL, Structure, POINTER, byref, cast
-from ctypes import c_int, c_char_p, c_size_t, c_byte
+from ctypes import c_int, c_char_p, c_size_t, c_byte, c_void_p
 import re
 
-def load_lib(path: str):
-    """ Convert to absolute path and load library """
-    if path[0] != '/' and path[0] != '\\' and path[1] != ':':
-        path = os.path.join(os.path.dirname(__file__), path)
-    if os.path.exists(path):
-        return CDLL(path)
-    return None
+def load_lib():
+    """ Load shared library """
+    libs = glob.glob(os.path.dirname(__file__) + '/libjuman.*so')
+    if not libs:
+        libs = glob.glob(os.path.dirname(__file__) + '/../dist/juman-*/lib/*.so')
+        if not libs:
+            print("Cannot find libjuman.so")
+            sys.exit(-1)
+    if len(libs) > 1: # To narrow down candidates
+        if os.name == "nt":
+            platform = "win64" if sys.maxsize > 2**32 else "win32"
+            pl_libs = filter(lambda x: x.find(platform) >= 0, libs)
+        else:   # POSIX
+            pl_libs = filter(lambda x: x.find("win64") < 0 and x.find("win32") < 0, libs)
+        if pl_libs:
+            libs = list(pl_libs)
+    return CDLL(libs[0])
 
-LIBC = load_lib('libjuman.so')
-if LIBC is None:
-    if sys.platform == "win32":
-        if LIBC is None:
-            if sys.maxsize > 2**32:
-                LIBC = load_lib('libjuman64.so')
-            else:
-                LIBC = load_lib('libjuman32.so')
-    if LIBC is None:
-        print("Cannot find libjuman.so")
-        sys.exit(-1)
+LIBC = load_lib()
 
 class MrphT(Structure):  # pylint: disable=R0903
     """ Type of morphese """
@@ -123,6 +124,7 @@ L_BUNRUI = []
 L_KATUYOU1 = []
 L_KATUYOU2 = []
 
+_JUMANRC = None
 _WRITE_BUF = None
 _BUF_SIZE = None
 _READ_BUF = None
@@ -155,32 +157,48 @@ def get_error_msg()->str:
         msg = "Input text is too long."
     return msg
 
+def status(stream=None):
+    """ Show status
+    @param stream Stream to output
+    @return String of status
+    """
+    stat_str = ""
+    if _JUMANRC is None:
+        stat_str += "Closed."
+    else:
+        stat_str += "Resource file: %s\n" % _JUMANRC
+        ptr = cast(_WRITE_BUF, c_void_p)
+        stat_str += "Write buffer : %s\n" % hex(ptr.value)
+        stat_str += "Buffer size  : %d\n" % _BUF_SIZE
+        ptr = cast(_READ_BUF, c_void_p)
+        stat_str += "Read buffer  : %s\n" % hex(ptr.value)
+        stat_str += "ERRORNO      : %d\n" % ERRORNO
+        stat_str += "message : %s\n" % get_error_msg()
+    if stream:
+        stream.write(stat_str)
+    return stat_str
+
 def open_lib(rc_path: str = None)->bool:
     """ Open juman library
     @param rc_path Path to resource file. None is available to load default.
     @return True when success, otherwise False.
     """
-    global ERRORNO, _WRITE_BUF, _BUF_SIZE, _READ_BUF
+    global _JUMANRC, ERRORNO, _WRITE_BUF, _BUF_SIZE, _READ_BUF
     global L_HINSI, L_BUNRUI, L_KATUYOU1, L_KATUYOU2
     ERRORNO = SUCCESS
-
-    L_HINSI = []
-    L_BUNRUI = []
-    L_KATUYOU1 = []
-    L_KATUYOU2 = []
-
-    _WRITE_BUF = None
-    _BUF_SIZE = None
-    _READ_BUF = None
-    _ENCODING = "UTF-8"
-
+    if _JUMANRC is not None:
+        return True
     if rc_path is None:
         abspath = os.path.abspath(__file__)
         rc_path = os.path.join(os.path.dirname(abspath), 'jumanrc')
+    if not os.path.exists(rc_path):
+        ERRORNO = FILE_NOT_EXISTS
+        return False
     res = LIBC.ext_init(rc_path.encode('UTF-8'), 0, 0)
     if SUCCESS != res:
         ERRORNO = res
         return False
+    _JUMANRC = rc_path
     size = c_size_t()
     _WRITE_BUF = LIBC.ext_get_input_buff(byref(size))
     _BUF_SIZE = size.value
@@ -217,7 +235,21 @@ def open_lib(rc_path: str = None)->bool:
 
 def close_lib():
     """ Close juman library  """
+    global _JUMANRC, ERRORNO, _WRITE_BUF, _BUF_SIZE, _READ_BUF
+    global L_HINSI, L_BUNRUI, L_KATUYOU1, L_KATUYOU2
+    if _JUMANRC is None:
+        return
     LIBC.ext_close()
+    # Clear
+    _JUMANRC = None
+    _WRITE_BUF = None
+    _BUF_SIZE = None
+    _READ_BUF = None
+    _ENCODING = "UTF-8"
+    L_HINSI = []
+    L_BUNRUI = []
+    L_KATUYOU1 = []
+    L_KATUYOU2 = []
 
 def set_encoding(encoding: str):
     """ Set encoding of input text
@@ -320,9 +352,12 @@ def get_katuyou2(katuyou1: int, katuyou2: int)->str:
     return L_KATUYOU2[katuyou1][katuyou2]
 
 if __name__ == '__main__':
-    if open_lib() is False:
+    from test import get_jumanrc
+    status(sys.stderr)
+    if open_lib(get_jumanrc()) is False:
         print(get_error_msg())
         sys.exit(0)
+    status(sys.stderr)
     Text = """吾輩は猫である。名前はまだ無い。\t
 どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。吾輩はここで始めて人間というものを見た。"""
     Mrphs = analyze(Text)

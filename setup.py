@@ -1,114 +1,76 @@
 """
 jumany setup
 """
-import sys
-import os
-from distutils.core import setup
-from scripts.custom_build import BuildTool
+from scripts.setup_ext import SetupExt
 
 # Don't insert space to be compatible shell script.
 MODULE_NAME="jumany" # pylint: disable=C0326
-MODULE_VERSION="0.3" # pylint: disable=C0326
+MODULE_VERSION="0.4.1" # pylint: disable=C0326
 
-_REQUIREMENT = {
-    'Python': (3, 3),
-    'Windows 64bit': True,
-    'Windows 32bit': False,
-    'POSIX': True,
-}
+DEVELOPMENT_STATE = 4   # Beta
+PACKAGE = "jumany"
 
-_SET_UP_ARGS = dict(
+_EXT = SetupExt(
     name=MODULE_NAME,
     version=MODULE_VERSION,
     description='Interface for JUMAN Morphological analysis system',
-    long_description="""Python interface for
-    `JUMAN <http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN>'
-    Morphological analysis system.""",
-    url='https://github.com/yujakudo/jumany',
+    packages=[PACKAGE, PACKAGE+'.test'],
+    package_dir={
+        PACKAGE: 'python_module',
+        PACKAGE+'.test': 'python_module/test'
+    },
+    package_data={PACKAGE: ['README.*', '*.txt']},
+    # test_suite='jumany.test',
     author='yujakudo',
-    packages=['jumany'],
-    package_dir={'jumany': 'python_module'},
-    package_data={'jumany': [
-        'COPYING', 'README.md', '*.txt', '*.so', 'jumanrc',
-        'dics/*/*.pat', 'dics/*/*.mat', 'dics/*/*.dat', 'dics/*/*.tab',
-        'dics/*/JUMAN.*'
-    ]},
+    url='https://github.com/yujakudo/jumany',
     classifiers=[
-        "Development Status :: 4 - Beta",
+        # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved",
-        "Operating System :: Microsoft :: Windows",
-        "Operating System :: POSIX",
-        "Programming Language :: Python :: 3.3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Topic :: Scientific/Engineering",
         "Topic :: Software Development",
         "Topic :: Text Processing",
     ],
 )
 
-_BUILD_INFO_DICT = {
-    'Windows 64bit': {
-        'test_dir': "test",
-    },
-    'POSIX': {
-        'tools': ['tar', 'patch', 'make'],
-        'scripts': {
-            'build': ["scripts/build_ext.sh build"],
-            'clean': ["scripts/build_ext.sh clean"],
-        },
-        'targets': ["build/lib/jumany/libjuman.so"],
-        'test_dir': "test",
+_EXT.set_requirement(
+    python=[(3, 3)],
+    win64=True,
+    win32=True,
+    posix=True,
+)
+
+_EXT.set_development_state(DEVELOPMENT_STATE)
+
+_EXT.set_extensions(
+    posix={
+        'libjuman': dict(
+            description='library of JUMAN',
+            src_dir='juman-7.01/lib',
+            define_macros=[('HAVE_CONFIG_H', 1)],
+            include_dirs=['juman-7.01/lib', 'scripts'],
+            extra_compile_args=["-Wno-error=format-security", "-O3", "-march=native"],
+        )
     }
-}
+)
 
-# General process
+_EXT.set_custom_build(
+    for_all=[
+        'copy scripts/jumanrc.win jumanrc',
+        'copy_tree dist/juman-7.01_ext_win64/dics dics'
+    ],
+    win64=[
+        'copy dist/juman-7.01_ext_win64/lib/libjuman.so libjuman.win64.so',
+        'copy copyings/copying.libjuman.win.txt LICENSE.libjuman.txt',
+    ],
+    win32=[
+        'copy dist/juman-7.01_ext_win32/lib/libjuman.so libjuman.win32.so',
+        'copy copyings/copying.libjuman.win.txt LICENSE.libjuman.txt',
+    ],
+    posix=[
+        'copy copyings/copying.libjuman.txt LICENSE.libjuman.txt',
+    ],
+)
 
-# Get system
-_SYSTEM = None
-if os.name == 'nt':
-    if sys.maxsize <= 2**32:
-        _SYSTEM = 'Windows 32bit'
-    else:
-        _SYSTEM = 'Windows 64bit'
-elif os.name == 'posix':
-    _SYSTEM = 'POSIX'
-
-# Get package name and directory
-_PACKAGE_NAME = _SET_UP_ARGS['packages'][0]
-_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-_PACKAGE_DIR = os.path.join(_BASE_DIR, _PACKAGE_NAME)
-if 'package_dir' in _SET_UP_ARGS and _PACKAGE_NAME in _SET_UP_ARGS['package_dir']:
-    _PACKAGE_DIR = os.path.join(
-        _BASE_DIR, _SET_UP_ARGS['package_dir'][_PACKAGE_NAME]
-    )
-
-# Set long description from README.txt
-# _README = os.path.join(_PACKAGE_DIR, 'README.txt')
-# if os.path.exists(_README):
-#     with open(_README, 'rb') as fp:
-#         _SET_UP_ARGS['long_description'] = fp.read().decode('utf8')
-
-# Set custom build info.
-_BUILD_INFO = None
-if _SYSTEM in _BUILD_INFO_DICT:
-    BuildTool.set_def_options(**_BUILD_INFO_DICT[_SYSTEM])
-    BuildTool.set_def_options(cwd=_BASE_DIR)
-    BuildTool.update_setup_arg(_SET_UP_ARGS)
-
-# Check system requirement.
-if "install" in sys.argv:
-    msg = ""
-    if not _SYSTEM in _REQUIREMENT or _REQUIREMENT[_SYSTEM] is False:
-        msg += "%s can not be installed on %s system.\n" % (_PACKAGE_NAME, _SYSTEM)
-    if sys.version_info < _REQUIREMENT['Python']:
-        msg += "Python %d.%d or above is required.\n" % _REQUIREMENT['Python']
-    if msg != "":
-        sys.stderr.write(msg)
-        sys.exit(-1)
-
-# Setup
-setup(**_SET_UP_ARGS)
+_EXT.setup()

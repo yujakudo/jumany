@@ -1,6 +1,6 @@
 * Summary
 
-if exists, libjuman.so is built from followings:
+libjuman.<system description>.so is including followings:
 
 	JUMAN	7.01
 		URL:	http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN
@@ -12,33 +12,21 @@ if exists, libjuman.so is built from followings:
 		license:	Public domain
 		patch for JUMAN-7.10 to add extra API
 
-libjuman64.so is including followings:
-
-	JUMAN	7.01
-		URL:	http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN
-		license:	3-Clause BSD
-		main program
-
-	ext_juman-7.01_03.patch
-		URL:		https://github.com/yujakudo/jumany/
-		license:	Public domain
-		patch for JUMAN-7.10 to add extra API
-
-	libsystre	1.0.1
+	libsystre	1.0.1-2
 		license		2-Clause BSD
 		for regcomp, regfree, regerr, regexec
 
-	libtre	1.0.1
+	libtre	r122.c2f5d13-4
 		URL:		https://github.com/laurikari/tre
 		license:	2-Clause BSD
 		for foretre_regcomp, tre_regfree, tre_regerr, tre_regexec
 
-	libintl	0.19.7
+	libintl	0.19.7-3
 		URL:	https://www.gnu.org/software/gettext/
 		license:	LGPL
 		for libintl_gettext
 
-	libiconv	1.14
+	libiconv	1.14-6
 		URL:	http://www.gnu.org/software/libiconv/
 		license:	LGPL
 		for libiconv, libiconv_open, liviconv_set_relocation_prefix
@@ -89,7 +77,7 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --
 
-libsystre	1.0.1
+libsystre	1.0.1-2
 license		2-Clause BSD
 for regcomp, regfree, regerr, regexec
 --
@@ -123,7 +111,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --
 
-libtre	1.0.1-2
+libtre	r122.c2f5d13-4
 URL:		https://github.com/laurikari/tre
 license:	2-Clause BSD
 for foretre_regcomp, tre_regfree, tre_regerr, tre_regexec
@@ -159,7 +147,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --
 
-libintl	0.19.7
+libintl	0.19.7-3
 URL:	https://www.gnu.org/software/gettext/
 license:	LGPL
 for libintl_gettext
@@ -287,7 +275,7 @@ BECAUSE THE LIBRARY IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY FOR THE LIB
 IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR REDISTRIBUTE THE LIBRARY AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE LIBRARY (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A FAILURE OF THE LIBRARY TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 --
 
-libiconv	1.14
+libiconv	1.14-6
 URL:	http://www.gnu.org/software/libiconv/
 license:	LGPL
 for libiconv, libiconv_open, liviconv_set_relocation_prefix

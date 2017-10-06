@@ -152,7 +152,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      fprintf(stderr, "             -S : start JUMAN server\n");
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/encoder.c juman-7.01/lib/encoder.c
 --- B:/msys64/tmp/juman-7.01/lib/encoder.c	Thu Jan  1 00:00:00 1970
-+++ juman-7.01/lib/encoder.c	Mon Oct  2 20:41:39 2017
++++ juman-7.01/lib/encoder.c	Fri Oct  6 11:23:03 2017
 @@ -0,0 +1,245 @@
 +#include <stdlib.h>
 +#include <stdarg.h>
@@ -512,8 +512,8 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +#endif	//	ENCODER_H
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/ext_api.c juman-7.01/lib/ext_api.c
 --- B:/msys64/tmp/juman-7.01/lib/ext_api.c	Thu Jan  1 00:00:00 1970
-+++ juman-7.01/lib/ext_api.c	Mon Oct  2 23:29:59 2017
-@@ -0,0 +1,268 @@
++++ juman-7.01/lib/ext_api.c	Fri Oct  6 11:19:53 2017
+@@ -0,0 +1,273 @@
 +#include <stdlib.h>
 +#include <stdio.h>
 +#include <string.h>
@@ -554,6 +554,11 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +extern FORM		Form[TYPE_NO][FORM_NO];
 +
 +static char * wordcopy(char **pword_pos, size_t *pword_buf_rest, const char * word);
++
++#define free(buff) { \
++	if( (buff)==NULL) free((buff)); \
++	(buff) = NULL; \
++}
 +
 +///	Set encoding
 +///	It must be called before ext_init.
@@ -1079,7 +1084,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +#define IS_ABS_PATH(s_path) ( *(s_path)=='/' || *(s_path)=='\\' || *(s_path+1)==':')
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/juman_lib.c juman-7.01/lib/juman_lib.c
 --- B:/msys64/tmp/juman-7.01/lib/juman_lib.c	Mon Dec 15 09:48:31 2014
-+++ juman-7.01/lib/juman_lib.c	Tue Sep 26 13:39:17 2017
++++ juman-7.01/lib/juman_lib.c	Fri Oct  6 11:23:53 2017
 @@ -90,8 +90,10 @@
  #include <config.h>
  #endif
@@ -1168,17 +1173,18 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      return TRUE;
  }
  
-@@ -518,7 +540,8 @@ BOOL juman_close(void)
+@@ -518,7 +540,9 @@ BOOL juman_close(void)
  
    free(rensetu_tbl);
    free(rensetu_mtr);
 -
 +  encoder_delete(p_encoder);
++  p_encoder = NULL;
 +  
    return TRUE;
  }
  
-@@ -2397,6 +2420,7 @@ int juman_sent(void)
+@@ -2397,6 +2421,7 @@ int juman_sent(void)
  	process_buffer_max += BUFFER_BLOCK_SIZE;
      }
  
@@ -1186,7 +1192,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      length = strlen(String);
  
      if (length == 0) return FALSE;	/* 空行はスキップ */
-@@ -2549,3 +2573,40 @@ int juman_sent(void)
+@@ -2549,3 +2574,40 @@ int juman_sent(void)
  
      return TRUE;
  }

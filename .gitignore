@@ -67,9 +67,14 @@ __pycache__
 MANIFEST
 
 #env
+test/result_*.txt
 .git/
 .vscode/
+.recycle/
+build/
+debug/
 dist/
 dics/
 juman-7.01/
-python_module/copying.txt
+python_module/LICENSES.txt
+custom_build/

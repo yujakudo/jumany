@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 set -e
 
 IS_WIN=false
@@ -12,12 +12,6 @@ PYTHON=python3
 PIP=pip3
 DIFF=/b/bin/diff
 
-# For POSIX systems
-PREFIX="$HOME/local"
-CFLAGS="-Ofast -march=native"
-LDFLAGS=
-LIBS=
-
 # Environment
 JUMAN_URL=http://nlp.ist.i.kyoto-u.ac.jp/nl-resource/juman/juman-7.01.tar.bz2
 DOWNLOADS=JUMAN_URL
@@ -25,10 +19,20 @@ JUMAN=juman-7.01
 ARCHIVE=${JUMAN}.tar.bz2
 PACKAGE=${JUMAN}
 ARCHIVE_DIR=archives
+TEST_DIR=test
+TEST_EXE=./test.sh
+
 PACKAGE_DIR=${PACKAGE}
 PATCH_FILE=${ARCHIVE_DIR}/ext_${PACKAGE}_03.patch
 DIST_NAME=${JUMAN}_ext
 DIST_DIR=dist
+
+# For POSIX systems
+#PREFIX="$HOME/local"
+PREFIX=${PWD}/${DIST_DIR}/${DIST_NAME}_$(uname)
+CFLAGS="-Ofast -march=native"
+LDFLAGS=
+LIBS=
 
 # For Windows. (MinGW)
 if $IS_WIN; then
@@ -40,12 +44,14 @@ fi
 
 # For Python module
 PYMOD_DIR=python_module
-PYPI_TEST_SITE=https://testpypi.python.org
 # Get module name and version from setup.py
 eval $(grep MODULE_NAME= setup.py)
 eval $(grep MODULE_VERSION= setup.py)
 V_VERSION="v${MODULE_VERSION}"
 echo $MODULE_NAME $V_VERSION
+
+INSTALL_TEST="${PYTHON} -m ${MODULE_NAME}.test"
+UNINSTALL="${PIP} uninstall ${MODULE_NAME}"
 
 # configure to install.
 # @param dist_dir for prefix
@@ -65,6 +71,8 @@ function build_all() {
 		make libjuman.so
 		cd ..
 	else
+		echo ./configure --prefix=$1 \
+			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" CFLAGS="$2"
 		./configure --prefix=$1 \
 			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" CFLAGS="$2"
 		make clean all install
@@ -87,10 +95,6 @@ function align() {
 		cp ${curdir}/scripts/jumanrc.win ./jumanrc
 		cp ${curdir}/scripts/juman-i.bat .
 		cd $curdir
-		if [[ $1 =~ _win([0-9]+)$ ]]; then
-			bit_width=${BASH_REMATCH[1]}
-			cp $1/lib/libjuman.so ${PYMOD_DIR}/libjuman${bit_width}.so
-		fi
 	fi
 }
 
@@ -137,22 +141,27 @@ elif [ $cmd = "diff" ]; then
 	todir=${PACKAGE_DIR}
 	$DIFF ${diff_opt} ${fromdir} ${todir} > ${PATCH_FILE}
 
+elif [ $cmd = "test" ]; then
+	if $IS_WIN; then
+		cd $TEST_DIR
+		$TEST_EXE ../dist/juman-7.01_ext_win64/juman.exe
+		$TEST_EXE ../dist/juman-7.01_ext_win32/juman.exe
+		cd ..
+	else
+		cd $TEST_DIR
+		$TEST_EXE ${PREFIX}/bin/juman
+		cd ..
+	fi
+
 elif [ $cmd = "clean-dist" ]; then
 	rm -rf ${DIST_DIR}/*
 
-elif [ $cmd = "pymod" ]; then
-	rm -rf ${PYMOD_DIR}/dics
-	cp -r ${DIST_DIR}/${DIST_NAME}_win64/dics $PYMOD_DIR
-	rm -f ${DIST_DIR}/*.zip
-	cp copyings/copying.pymod.txt ${PYMOD_DIR}/copying.txt
-	$PYTHON setup.py sdist
-
 elif [ $cmd = "zip" ]; then
 	cp copyings/copying.exe.txt ${DIST_DIR}/${DIST_NAME}_win64/copying.txt
-#	cp copyings/copying.exe.txt ${DIST_DIR}/${DIST_NAME}_win32/copying.txt
+	cp copyings/copying.exe.txt ${DIST_DIR}/${DIST_NAME}_win32/copying.txt
 	cd ${DIST_DIR}
 	zip -r ${DIST_NAME}-${MODULE_VERSION}_win64.zip ${DIST_NAME}_win64
-#	zip -r ${DIST_NAME}-${MODULE_VERSION}_win32.zip ${DIST_NAME}_win32
+	zip -r ${DIST_NAME}-${MODULE_VERSION}_win32.zip ${DIST_NAME}_win32
 	cd ..
 
 elif [ $cmd = "git-push" ]; then
@@ -164,18 +173,34 @@ elif [ $cmd = "git-tag" ]; then
 	git tag -a $V_VERSION -m "${comm}"
 	git push origin $V_VERSION
 
-elif [ $cmd = "pypi-test" ]; then
-	$PYTHON setup.py register -r ${PYPI_TEST_SITE}/pypi
-	$PYTHON setup.py sdist upload -r ${PYPI_TEST_SITE}/pypi
+elif [ $cmd = "pymod" ]; then
+	rm -f ${DIST_DIR}/*.tar.gz
+	rm -f ${DIST_DIR}/*.whl
+	rm -rf debug/*
+	rm -rf build
+	$PYTHON setup.py sdist
+#	$PYTHON setup.py bdist_wheel
+	$PIP install --prefix debug ${DIST_DIR}/${MODULE_NAME}-${MODULE_VERSION}.tar.gz
+	cd debug
+#	tar xf ../${DIST_DIR}/${MODULE_NAME}-${MODULE_VERSION}.tar.gz
+	cd lib/python3.5/site-packages
+	$INSTALL_TEST
+	cd ../../../..
 
-elif [ $cmd = "test-pip" ]; then
-	$PYTHON -m twine upload --repository testpypi --skip-existing /mnt/z/jumany-0.3.zip
-	$PIP install --index-url ${PYPI_TEST_SITE}/simple/ $MODULE_NAME
-	$PIP test $MODULE_NAME
+elif [ $cmd = "test-upload" ]; then
+	$PYTHON -m twine upload --repository testpypi --skip-existing dist/${MODULE_NAME}-${MODULE_VERSION}*.*
+
+elif [ $cmd = "pip-test" ]; then
+	$PIP install --index-url https://test.pypi.org/simple/ $MODULE_NAME --user
+	$INSTALL_TEST
 
 elif [ $cmd = "pypi-upload" ]; then
-	$PYTHON setup.py register
-	$PYTHON setup.py sdist upload
+	$PYTHON -m twine upload --repository pypi --skip-existing dist/${MODULE_NAME}-${MODULE_VERSION}*.*
+	$PIP install $MODULE_NAME --user
+	$INSTALL_TEST
+
+elif [ $cmd = "uninstall" ]; then
+	$UNINSTALL
 
 else
 	echo "Unknown command:" $cmd
