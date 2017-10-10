@@ -1,8 +1,8 @@
+======
 jumany
 ======
-Python interface for JUMAN Morphological analysis system.
-
-`JUMAN <http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN>`
+Python interface for
+`JUMAN Morphological analysis system <http://nlp.ist.i.kyoto-u.ac.jp/index.php?JUMAN>`_ .
 
 Requirement
 -----------
@@ -11,19 +11,22 @@ Requirement
 
 Installation
 ------------
-```pip install jumany
-```
+::
+
+    pip install jumany
 
 How to use
 ----------
-```import jumany
-jumany.open_lib()
-jumany.analyze(str_japanese)
-```
-See `jumany page <https://github.com/yujakudo/jumany/python_module>` for more details in Japanese.
+::
 
-Licenses
+    import jumany
+    jumany.open_lib()
+    jumany.analyze("吾輩は猫である。")
+
+See `jumany page <https://github.com/yujakudo/jumany>`_ for more details in Japanese.
+
+License
 --------
 - Python scripts: BSD License
 - Library: BSD License
-- Pre-built libraries for Windows: BSD License, but libraries under LGPL are linked.
+- Pre-built library for Windows: BSD License, additionally libraries under LGPL are linked.

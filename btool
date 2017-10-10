@@ -182,7 +182,6 @@ elif [ $cmd = "pymod" ]; then
 #	$PYTHON setup.py bdist_wheel
 	$PIP install --prefix debug ${DIST_DIR}/${MODULE_NAME}-${MODULE_VERSION}.tar.gz
 	cd debug
-#	tar xf ../${DIST_DIR}/${MODULE_NAME}-${MODULE_VERSION}.tar.gz
 	cd lib/python3.5/site-packages
 	$INSTALL_TEST
 	cd ../../../..
@@ -191,11 +190,13 @@ elif [ $cmd = "test-upload" ]; then
 	$PYTHON -m twine upload --repository testpypi --skip-existing dist/${MODULE_NAME}-${MODULE_VERSION}*.*
 
 elif [ $cmd = "pip-test" ]; then
-	$PIP install --index-url https://test.pypi.org/simple/ $MODULE_NAME --user
+	$PIP install --no-cache-dir --index-url https://test.pypi.org/simple/ $MODULE_NAME --user
 	$INSTALL_TEST
 
 elif [ $cmd = "pypi-upload" ]; then
 	$PYTHON -m twine upload --repository pypi --skip-existing dist/${MODULE_NAME}-${MODULE_VERSION}*.*
+
+elif [ $cmd = "pip-install" ]; then
 	$PIP install $MODULE_NAME --user
 	$INSTALL_TEST
 

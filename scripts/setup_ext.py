@@ -33,6 +33,14 @@ _DEV_STATUS_CLASSFIERS = [
     "Development Status :: 7 - Inactive",
 ]
 
+_LICESE_CLASSFIERS = {
+    'MIT': "License :: OSI Approved :: MIT License",
+    'BSD': "License :: OSI Approved :: BSD License",
+    'Apache': "License :: OSI Approved :: Apache Software License",
+    'Apache 2.0': "License :: OSI Approved :: Apache Software License",
+    'LGPL': "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
+}
+
 _PY_MAX_MINORS = [0, 0, 7, 6, 0]
 
 class SetupExt: # pylint: disable=R0902
@@ -71,15 +79,20 @@ class SetupExt: # pylint: disable=R0902
                 fn = os.path.join(self.package_dir, 'README'+ext)
                 if os.path.exists(fn):
                     with open(fn, 'rb') as fp:
-                        self.args['long_description'] = fp.read().decode('utf8')
+                        self.args['long_description'] = fp.read().decode('utf8').replace("\r\n", '\n')
                     break
+        # Set classifiers of licenses
+        if 'classifiers' not in self.args:
+            self.args['classifiers'] = []
+        if 'license' in self.args:
+            for license in self.args['license'].split('+'):
+                if license in _LICESE_CLASSFIERS:
+                    self.args['classifiers'].append(_LICESE_CLASSFIERS[license])
 
     def set_development_state(self, code: int):
         """ Set development state
         @param code development state from 1 to 6.(3 to 5 are common)
         """
-        if 'classifiers' not in self.args:
-            self.args['classifiers'] = []
         self.args['classifiers'].append(_DEV_STATUS_CLASSFIERS[code])
 
     def set_requirement(self, **req):
@@ -89,13 +102,15 @@ class SetupExt: # pylint: disable=R0902
         @param posix, win32, win64 Not False if supported
         """
         self.system_req = req
-        if 'classifiers' not in self.args:
-            self.args['classifiers'] = []
+        if 'platforms' not in self.args:
+            self.args['platforms'] = []
         for sys_name in _SYSTEMS:
             if sys_name in self.system_req and self.system_req[sys_name] is not False:
                 classfier = _SYSTEM_CLASSFIERS[sys_name]
                 if classfier not in self.args['classifiers']:
                     self.args['classifiers'].append(classfier)
+                    splited = classfier.split(' ')
+                    self.args['platforms'].append(splited[-1])                    
         if 'python' in self.system_req:
             max_major = 0
             pyreq = ''
@@ -205,6 +220,28 @@ class SetupExt: # pylint: disable=R0902
         self._show()
         self._check_requirement()
         setuptools.setup(**self.args)
+
+    @staticmethod
+    def _crypt_addr(addr: str)->str:
+        crypted = ''
+        for c in addr:
+            asc = ord(c)
+            if 'a' <= c and c <= 'z': # pylint: disable=C0122
+                asc += 13 if c < 'n' else -13
+            if 'A' <= c and c <= 'Z': # pylint: disable=C0122
+                asc += 13 if c < 'N' else -13
+            if '0' <= c and c <= '9': # pylint: disable=C0122
+                asc += 5 if c < '5' else -5
+            if c == '@':
+                asc = ord('.')
+            if c == '.':
+                asc = ord('@')
+            crypted += chr(asc)
+        return crypted
+
+    def set_crypted_mailaddr(self, addr: str)->str:
+        """ Set crypted mail address """
+        self.args['author_email'] = self._crypt_addr(addr)
 
 class CustomBuild(build):
     """ Overwrite build """
