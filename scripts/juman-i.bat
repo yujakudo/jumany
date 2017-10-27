@@ -1,1 +1,1 @@
-juman --enc cp932
+@%~dp0\juman.exe --enc cp932 %1 %2 %3 %4 %5 %6 %7 %8 %9

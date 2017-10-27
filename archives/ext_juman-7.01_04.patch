@@ -10,9 +10,26 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  
  
  # Checks for libraries.
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/juman/client.c juman-7.01/juman/client.c
+--- B:/msys64/tmp/juman-7.01/juman/client.c	Mon Sep 26 17:55:47 2011
++++ juman-7.01/juman/client.c	Wed Oct 25 17:32:30 2017
+@@ -337,12 +337,7 @@ static int open_connection(server, port)
+   引数としてargcを追加オプションの扱いをJUMAN用へ変更
+   NACSIS 吉岡
+ */
+-int juman_client(argc, argv, server, port)
+-    int argc;
+-    char **argv;
+-    char *server;
+-    int port;
+-{
++int juman_client(int argc, char **argv, char *server, int port) {
+     int pid, sfd;
+     char *option;
+     FILE *ifp, *ofp;
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/juman/juman.c juman-7.01/juman/juman.c
 --- B:/msys64/tmp/juman-7.01/juman/juman.c	Tue Dec 27 17:29:53 2011
-+++ juman-7.01/juman/juman.c	Mon Sep 25 13:48:20 2017
++++ juman-7.01/juman/juman.c	Wed Oct 25 17:42:06 2017
 @@ -46,6 +46,9 @@ extern U_CHAR	        String[LENMAX];
  int             JUMAN_server_mode = FALSE;
  int             JUMAN_server_foreground = FALSE;
@@ -23,7 +40,26 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  #define JUMAN_PORT   32000
  #ifndef MAXHOSTNAMELEN
  #define MAXHOSTNAMELEN 64
-@@ -151,7 +154,10 @@ int readtonl(FILE *fp)
+@@ -54,6 +57,18 @@ int             JUMAN_server_foreground 
+ static char juman_host[MAXHOSTNAMELEN];
+ static unsigned short juman_port = JUMAN_PORT;
+ 
++extern int juman_client(int argc, char **argv, char *server, int port);
++extern int compile_unkword_patterns();
++
++extern BOOL	juman_init_rc(FILE *fp);
++extern void juman_init_etc(void);
++extern int	juman_close(void);
++extern int	juman_sent(void);
++extern char	**print_best_path(FILE* output);
++extern char	**print_all_mrph(FILE* output);
++extern char	**print_all_path(FILE* output);
++extern char	**print_homograph_path(FILE* output);
++
+ 
+ /*
+ ------------------------------------------------------------------------------
+@@ -151,7 +166,10 @@ int readtonl(FILE *fp)
  
  void juman_standalone(void)
  {
@@ -35,7 +71,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      
      if (!juman_init_rc(Jumanrc_Fileptr)) {	/* rcfile関係の初期化 */
  	fprintf(stderr, "error in .jumanrc\n");
-@@ -161,20 +167,36 @@ void juman_standalone(void)
+@@ -161,20 +179,36 @@ void juman_standalone(void)
  #ifdef HAVE_REGEX_H
      if (Onomatopoeia_Opt) Unkword_Pat_Num = compile_unkword_patterns();
  #endif
@@ -80,7 +116,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  	    continue;
  	} else {
  #ifdef _WIN32
-@@ -187,27 +209,27 @@ void juman_standalone(void)
+@@ -187,27 +221,27 @@ void juman_standalone(void)
  
  	if (Show_Opt_tag[0])
  	    if (!strncmp(String , Show_Opt_tag , strlen(Show_Opt_tag))) {
@@ -116,7 +152,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      }
      juman_close();
  }
-@@ -301,12 +323,21 @@ else {
+@@ -301,12 +335,21 @@ else {
  		    }
  		    else if ( argv[i][0] == 'o' && argv[i][1] == 'n' && argv[i][2] == 'o') {
  			Repetition_Opt = Onomatopoeia_Opt = 0; /* onomatopoeia */
@@ -140,7 +176,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  	    /* サーバーモード用のオプションの取扱い */
              else if ( argv[i][1] == 'S' ) JUMAN_server_mode = TRUE;
  #if ! defined _WIN32
-@@ -377,6 +408,9 @@ void juman_help()
+@@ -377,6 +420,9 @@ void juman_help()
      fprintf(stderr, "             -u : disable unknown word processing\n");
      fprintf(stderr, "             -i : ignore an input line starting with 'string'\n");
      fprintf(stderr, "             -r : use 'rc_file' as '.jumanrc'\n");
@@ -150,6 +186,36 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      fprintf(stderr, "             -v : show version\n");
      fprintf(stderr, "\n");
      fprintf(stderr, "             -S : start JUMAN server\n");
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/juman/server.c juman-7.01/juman/server.c
+--- B:/msys64/tmp/juman-7.01/juman/server.c	Wed Nov 16 08:23:45 2011
++++ juman-7.01/juman/server.c	Wed Oct 25 17:42:36 2017
+@@ -45,7 +45,9 @@
+ 
+ #include <juman.h>
+ 
++#ifndef errno
+ extern int errno;
++#endif
+ 
+ #ifndef SOMAXCONN
+ #define SOMAXCONN 5
+@@ -81,7 +83,15 @@ extern int              LongSoundDel_Opt
+ extern U_CHAR	        String[LENMAX];
+ 
+ #define JUMAN_INPUT_SIZE  8192
+-   
++
++extern BOOL	juman_init_rc(FILE *fp);
++extern void juman_init_etc(void);
++extern int	juman_sent(void);
++extern char	**print_best_path(FILE* output);
++extern char	**print_all_mrph(FILE* output);
++extern char	**print_all_path(FILE* output);
++extern char	**print_homograph_path(FILE* output);
++
+ /*
+  * skip_until_EOf()
+  */
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/encoder.c juman-7.01/lib/encoder.c
 --- B:/msys64/tmp/juman-7.01/lib/encoder.c	Thu Jan  1 00:00:00 1970
 +++ juman-7.01/lib/encoder.c	Fri Oct  6 11:23:03 2017
@@ -922,7 +988,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/iotool.c juman-7.01/lib/iotool.c
 --- B:/msys64/tmp/juman-7.01/lib/iotool.c	Tue Oct 18 16:19:24 2011
-+++ juman-7.01/lib/iotool.c	Tue Oct  3 01:16:07 2017
++++ juman-7.01/lib/iotool.c	Wed Oct 25 17:30:02 2017
 @@ -12,6 +12,14 @@
  
  #include	<juman.h>
@@ -967,7 +1033,12 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  
       return (fp = fopen(filename_path, mode));
  }
-@@ -222,7 +235,7 @@ void error(int errno, char *msg, ...)
+@@ -218,11 +231,11 @@ void my_exit(int exit_code)
+ ------------------------------------------------------------------------------
+ */
+ 
+-void error(int errno, char *msg, ...)
++void error(int err_no, char *msg, ...)
  {
       char *str;
       va_list ap;
@@ -976,6 +1047,24 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
       if (Cha_stderr == NULL)
  	 Cha_stderr = stderr;
  
+@@ -236,7 +249,7 @@ void error(int errno, char *msg, ...)
+ 
+      va_end(ap);
+ 
+-     my_exit(errno);
++     my_exit(err_no);
+ }
+ 
+ /*
+@@ -246,7 +259,7 @@ void error(int errno, char *msg, ...)
+ ------------------------------------------------------------------------------
+ */
+ 
+-void warning(int errno, char *msg, ...)
++void warning(int err_no, char *msg, ...)
+ {
+      char *str;
+      va_list ap;
 @@ -510,10 +523,12 @@ void set_jumanrc_fileptr(char *option_rc
  	$HOME/.jumanrc
  	→ rcfileがなくてもよい
@@ -1017,7 +1106,49 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  }
  
  /*
-@@ -688,3 +712,35 @@ void cha_exit_perror(s)
+@@ -622,10 +646,8 @@ static char chasenrc_path[CHA_FILENAME_M
+ ------------------------------------------------------------------------------
+ */
+ 
+-void cha_exit(status, format, a, b, c, d, e, f, g, h)
+-    int status;
+-    char *format, *a, *b, *c, *d, *e, *f, *g, *h;
+-{
++void cha_exit(int status, const char *format, ...) {
++    va_list va;
+     if (Cha_errno)
+       return;
+ 
+@@ -634,8 +656,11 @@ void cha_exit(status, format, a, b, c, d
+ 
+     if (progpath)
+       fprintf(Cha_stderr, "%s: ", progpath);
+-    fprintf(Cha_stderr, format, a, b, c, d, e, f, g, h);
+ 
++    va_start(va, format);
++    vfprintf(Cha_stderr, format, va);
++	va_end(va);
++    
+     if (status >= 0) {
+ 	fputc('\n', Cha_stderr);
+ 	if (Cha_stderr == stderr)
+@@ -674,17 +699,45 @@ void cha_exit_file(status, format, a, b,
+     }
+ }
+ 
+-void cha_perror(s)
+-    char *s;
+-{
++void cha_perror(const char *s) {
+     cha_exit(-1, "");
+     perror(s);
+ }
+ 
+-void cha_exit_perror(s)
+-    char *s;
+-{
++void cha_exit_perror(const char *s) {
+     cha_perror(s);
      exit(1);
  }
  
@@ -1055,8 +1186,53 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +}
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/juman.h juman-7.01/lib/juman.h
 --- B:/msys64/tmp/juman-7.01/lib/juman.h	Mon Dec 15 09:47:28 2014
-+++ juman-7.01/lib/juman.h	Tue Sep 26 13:38:46 2017
-@@ -497,3 +497,25 @@ unsigned char	*hantozen(unsigned char *s
++++ juman-7.01/lib/juman.h	Wed Oct 25 17:41:28 2017
+@@ -423,7 +423,7 @@ void	getpath(char *cur_path, char *juman
+ void	*my_alloc(int n);
+ void	*my_realloc(void *ptr, int n);
+ void	my_exit(int exit_code);
+-void	error(int errno, char *msg, ...);
++void	error(int err_no, char *msg, ...);
+ char	lower(char c);
+ char	upper(char c);
+ int 	my_strlen(U_CHAR *s);
+@@ -438,6 +438,14 @@ void	ls(FILE *fp, char *p, char *f);
+ void	print_current_time(FILE *fp);
+ void	print_execute_time(FILE *fp, int dt, float dp);
+ 
++void warning(int err_no, char *msg, ...);
++void set_jumanrc_fileptr(char *option_rcfile, int look_rcdefault_p, int exit_rc_notfound_p);
++void set_jumangram_dirname();
++int check_filesize(FILE *fp);
++void cha_exit(int status, const char *format, ...);
++void cha_perror(const char *s);
++
++
+ /* lisp.c */
+ int	s_feof(FILE *fp);
+ int	s_feof_comment(FILE *fp);
+@@ -462,6 +470,8 @@ CELL	*_s_print_cdr(FILE *fp, CELL *cell)
+ void	*lisp_alloc(int n);
+ void 	lisp_alloc_push(void);
+ void 	lisp_alloc_pop(void);
++void set_cha_getc();
++void unset_cha_getc();
+ 
+ /* grammar.c */
+ void	error_in_grammar(int n, int line_no);
+@@ -489,6 +499,11 @@ void read_matrix(FILE *fp);
+ int check_matrix(int postcon, int precon);
+ int check_matrix_left(int precon);
+ int check_matrix_right(int postcon);
++//  getid.c
++extern int get_hinsi_id(U_CHAR *x);
++extern int get_bunrui_id(U_CHAR *x, int hinsi);
++extern int get_type_id(U_CHAR *x);
++extern int get_form_id(U_CHAR *x, int type);
+ 
+ /* zentohan.c */
+ unsigned char	*zentohan(unsigned char *str1);
+@@ -497,3 +512,29 @@ unsigned char	*hantozen(unsigned char *s
  /* for edr-dic */
  void check_edrtable(MRPH *mrph_p, CELL *x);
  
@@ -1066,6 +1242,10 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +extern void enc_fprintf(FILE * stream, const char * format, ...);
 +
 +#ifdef _WIN32
++#ifdef GetPrivateProfileString
++#undef GetPrivateProfileString
++#endif
++
 +#define GetPrivateProfileString( lpAppName, lpKeyName, lpDefault, lpReturnedString, nSize, lpFileName ) { \
 +	if( strcmp("C:\\juman\\dic", lpDefault)==0 ) { \
 +		int pos; char *p_c; \
@@ -1084,7 +1264,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +#define IS_ABS_PATH(s_path) ( *(s_path)=='/' || *(s_path)=='\\' || *(s_path+1)==':')
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/juman_lib.c juman-7.01/lib/juman_lib.c
 --- B:/msys64/tmp/juman-7.01/lib/juman_lib.c	Mon Dec 15 09:48:31 2014
-+++ juman-7.01/lib/juman_lib.c	Fri Oct  6 11:23:53 2017
++++ juman-7.01/lib/juman_lib.c	Wed Oct 25 17:03:26 2017
 @@ -90,8 +90,10 @@
  #include <config.h>
  #endif
@@ -1126,17 +1306,19 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  /*
  ------------------------------------------------------------------------------
  	prototype definition of functions       >>> changed by T.Nakamura <<<
-@@ -257,6 +262,9 @@ int	pos_right_process(int position);
+@@ -257,6 +262,11 @@ int	pos_right_process(int position);
  int	check_connect(int pos_start, int m_num, char opt);
  int	juman_sent(void);
  
++int utf8_bytes(unsigned char *ucp);
++
 +static BOOL resolve_path(char *path);
 +#define fprintf enc_fprintf
 +
  /*
  ------------------------------------------------------------------------------
  	PROCEDURE: <changeDictionary>          >>> changed by T.Nakamura <<<
-@@ -364,6 +372,7 @@ BOOL juman_init_rc(FILE *fp)
+@@ -364,6 +374,7 @@ BOOL juman_init_rc(FILE *fp)
  		return FALSE;
  	    } else {
  		strcpy(Jumangram_Dirname , _Atom(cell2));
@@ -1144,7 +1326,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  		grammar(NULL);
  		katuyou(NULL);
  		connect_table(NULL);
-@@ -383,6 +392,7 @@ BOOL juman_init_rc(FILE *fp)
+@@ -383,6 +394,7 @@ BOOL juman_init_rc(FILE *fp)
  		    error(ConfigError, "Too many dictionary files.", EOA);
  		else {
  		    strcpy(dic_file_name, _Atom(car(cell2)));
@@ -1152,7 +1334,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  		    if ((endchar(dic_file_name)) != '/')
  			strcat(dic_file_name, "/");
  		    cell2 = cdr(cell2);
-@@ -437,7 +447,19 @@ BOOL juman_init_rc(FILE *fp)
+@@ -437,7 +449,19 @@ BOOL juman_init_rc(FILE *fp)
  	/* 未定義語コスト (3.4以降不要)
  	else if (!strcmp("未定義語品詞", _Atom(car(cell1))));
  	*/
@@ -1173,7 +1355,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      return TRUE;
  }
  
-@@ -518,7 +540,9 @@ BOOL juman_close(void)
+@@ -518,7 +542,9 @@ BOOL juman_close(void)
  
    free(rensetu_tbl);
    free(rensetu_mtr);
@@ -1184,7 +1366,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
    return TRUE;
  }
  
-@@ -2397,6 +2421,7 @@ int juman_sent(void)
+@@ -2397,6 +2423,7 @@ int juman_sent(void)
  	process_buffer_max += BUFFER_BLOCK_SIZE;
      }
  
@@ -1192,7 +1374,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      length = strlen(String);
  
      if (length == 0) return FALSE;	/* 空行はスキップ */
-@@ -2549,3 +2574,40 @@ int juman_sent(void)
+@@ -2549,3 +2576,40 @@ int juman_sent(void)
  
      return TRUE;
  }
@@ -1233,6 +1415,17 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +	encoder_vprintf(p_encoder, stream, format, va);
 +	va_end(va);
 +}
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/lisp.c juman-7.01/lib/lisp.c
+--- B:/msys64/tmp/juman-7.01/lib/lisp.c	Sun Aug 28 12:46:49 2011
++++ juman-7.01/lib/lisp.c	Wed Oct 25 16:58:15 2017
+@@ -48,6 +48,7 @@ CELLTABLE	CellTbl_save;
+ */
+ extern int fgetc(FILE *fp);
+ extern int ungetc(int c, FILE *fp);
++extern int dividing_code_p(int code);
+ 
+ static int (*my_getc)(FILE *fp) = fgetc;
+ static int (*my_ungetc)(int c, FILE *fp) = ungetc;
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/Makefile.in juman-7.01/lib/Makefile.in
 --- B:/msys64/tmp/juman-7.01/lib/Makefile.in	Mon Dec 15 09:50:09 2014
 +++ juman-7.01/lib/Makefile.in	Mon Sep 25 19:15:52 2017
@@ -1285,3 +1478,69 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  
  .c.o:
  @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/pat.c juman-7.01/lib/pat.c
+--- B:/msys64/tmp/juman-7.01/lib/pat.c	Fri Jul  1 13:14:19 2011
++++ juman-7.01/lib/pat.c	Wed Oct 25 16:59:21 2017
+@@ -48,6 +48,9 @@ static struct _dic_t {
+   caddr_t addr;
+ } dicinfo[MAX_DIC_NUMBER];
+ 
++extern int hash_check_proc(FILE *f, long index, char *buf);
++ 
++
+ /******************************************************
+ * pat_strcmp_prefix --- プレフィクスマッチ
+ *
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/Makefile.in juman-7.01/Makefile.in
+--- B:/msys64/tmp/juman-7.01/Makefile.in	Mon Dec 15 09:50:09 2014
++++ juman-7.01/Makefile.in	Tue Oct 24 21:02:28 2017
+@@ -239,7 +239,8 @@ target_alias = @target_alias@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-SUBDIRS = lib makeint makemat makepat juman dic autodic wikipediadic doc
++# SUBDIRS = lib makeint makemat makepat juman dic autodic wikipediadic doc
++SUBDIRS = lib makeint makemat makepat juman doc
+ jumanrcdir = $(sysconfdir)
+ nodist_jumanrc_DATA = jumanrc
+ dist_noinst_DATA = jumanrc.in
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/makeint/makeint.c juman-7.01/makeint/makeint.c
+--- B:/msys64/tmp/juman-7.01/makeint/makeint.c	Thu Sep 15 08:43:32 2011
++++ juman-7.01/makeint/makeint.c	Wed Oct 25 17:10:46 2017
+@@ -96,9 +96,9 @@ void translate(char *arg)
+ 
+ int main(int argc, char *argv[])
+ {
+-     long	t0, t1;
+-     long	p0, p1;
+-     int	dt, i;
++     time_t	t0, t1, dt;
++     clock_t p0, p1;
++     int	i;
+      float	dp;
+ 
+      ProgName = argv[0];
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/makeint/trans.c juman-7.01/makeint/trans.c
+--- B:/msys64/tmp/juman-7.01/makeint/trans.c	Fri Aug 26 11:04:44 2011
++++ juman-7.01/makeint/trans.c	Wed Oct 25 17:06:29 2017
+@@ -40,6 +40,8 @@ static 	MRPH 		mrph;
+ static  MRPH            mrph_buffer[MRPH_BUF_MAX];
+ static  int             mrph_buffer_num;
+ 
++int hankaku_check(U_CHAR *s);
++
+ enum	ErrorCode	{NotList, IllegalForm, ConflictGobi,
+ 			   NoMidasi, LongMidasi, 
+ 			   NoYomi,   LongYomi, 
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/makepat/makepat.c juman-7.01/makepat/makepat.c
+--- B:/msys64/tmp/juman-7.01/makepat/makepat.c	Thu Sep 15 08:48:28 2011
++++ juman-7.01/makepat/makepat.c	Wed Oct 25 17:12:32 2017
+@@ -24,7 +24,7 @@ int number_of_tree = 0; /* 使用する�
+ /****************************************************
+ *                      メイン                       *
+ ****************************************************/
+-main(int argc, char *argv[])
++int main(int argc, char *argv[])
+ {
+   char comm;
+   int i;

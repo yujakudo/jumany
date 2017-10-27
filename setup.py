@@ -5,7 +5,7 @@ from scripts.setup_ext import SetupExt
 
 # Don't insert space to be compatible shell script.
 MODULE_NAME="jumany" # pylint: disable=C0326
-MODULE_VERSION="0.4.5" # pylint: disable=C0326
+MODULE_VERSION="0.5" # pylint: disable=C0326
 
 DEVELOPMENT_STATE = 4   # Beta
 PACKAGE = MODULE_NAME

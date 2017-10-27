@@ -66,15 +66,21 @@ __pycache__
 *.egg-info
 MANIFEST
 
+#juman
+dics/
+juman-7.01/
+JUMAN.connect
+juman.ini
+jumandic.*
+juman.int
+
 #env
 test/result_*.txt
 .git/
-.vscode/
+#.vscode/
 .recycle/
 build/
 debug/
 dist/
-dics/
-juman-7.01/
 python_module/LICENSES.txt
 custom_build/

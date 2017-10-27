@@ -1,0 +1,67 @@
+{
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "juman",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${workspaceRoot}/juman-7.01/juman/.libs/juman.exe",
+				"args": [],
+				"stopAtEntry": true,
+				"cwd": "${workspaceRoot}",
+				"environment": [],
+				"externalConsole": true,
+				"MIMode": "gdb",
+				"miDebuggerPath": "B:/msys64/mingw64/bin/gdb.exe",
+				"setupCommands": [
+					{
+						"description": "Enable pretty-printing for gdb",
+						"text": "-enable-pretty-printing",
+						"ignoreFailures": true
+					}
+				]
+			},
+			{
+				"name": "makemat",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${workspaceRoot}/juman-7.01/makemat/.libs/makemat.exe",
+				"args": [],
+				"stopAtEntry": false,
+				"cwd": "${workspaceRoot}/new_dict",
+				"environment": [],
+				"externalConsole": true,
+				"MIMode": "gdb",
+				"miDebuggerPath": "B:/msys64/mingw64/bin/gdb.exe",
+				"setupCommands": [
+					{
+						"description": "Enable pretty-printing for gdb",
+						"text": "-enable-pretty-printing",
+						"ignoreFailures": true
+					}
+				]
+			},
+			{
+				"name": "makeint",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${workspaceRoot}/juman-7.01/makeint/.libs/makeint.exe",
+				"args": [
+					"juman.mdic"
+				],
+				"stopAtEntry": false,
+				"cwd": "${workspaceRoot}/new_dict",
+				"environment": [],
+				"externalConsole": true,
+				"MIMode": "gdb",
+				"miDebuggerPath": "B:/msys64/mingw64/bin/gdb.exe",
+				"setupCommands": [
+					{
+						"description": "Enable pretty-printing for gdb",
+						"text": "-enable-pretty-printing",
+						"ignoreFailures": true
+					}
+				]
+			}
+		]
+	}

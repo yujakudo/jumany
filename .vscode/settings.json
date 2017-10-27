@@ -1,0 +1,9 @@
+{
+	"files.associations": {
+		"juman.h": "c",
+		"makemat.h": "c"
+	},
+	"python.linting.pylintArgs": [
+		"--disable=W0603,C0103"
+	]
+}

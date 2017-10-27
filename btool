@@ -21,9 +21,10 @@ PACKAGE=${JUMAN}
 ARCHIVE_DIR=archives
 TEST_DIR=test
 TEST_EXE=./test.sh
+NEW_DIC_DIR=new_dict
 
 PACKAGE_DIR=${PACKAGE}
-PATCH_FILE=${ARCHIVE_DIR}/ext_${PACKAGE}_03.patch
+PATCH_FILE=${ARCHIVE_DIR}/ext_${PACKAGE}_04.patch
 DIST_NAME=${JUMAN}_ext
 DIST_DIR=dist
 
@@ -93,6 +94,7 @@ function align() {
 		mv libexec/juman/* libexec
 		rm -rf libexec/juman
 		cp ${curdir}/scripts/jumanrc.win ./jumanrc
+		cp ${curdir}/scripts/hinototori.jumanrc .
 		cp ${curdir}/scripts/juman-i.bat .
 		cd $curdir
 	fi
@@ -106,18 +108,23 @@ if [ $cmd = "load" ]; then
 	cd $PACKAGE_DIR
 	patch -p1 < ../${PATCH_FILE}
 	cd ..
+	mkdir -p $NEW_DIC_DIR
+	cp $PACKAGE_DIR/dic/JUMAN.connect.c $NEW_DIC_DIR
 
 elif [ $cmd = "build" ]; then
 	build_all $PREFIX "${CFLAGS}"
+	make -C new_dict all install prefix=${PREFIX}
 
 elif [ $cmd = "build-w64" ]; then
 	n_dist=${PREFIX}_win64
 	build_all ${n_dist} "${CFLAGS} -m64 -Ofast"
+	make -C new_dict all install prefix=${n_dist}
 	align ${n_dist}
 
 elif [ $cmd = "build-w32" ]; then
 	n_dist=${PREFIX}_win32
 	build_all ${n_dist} "${CFLAGS} -m32 -Ofast"
+	make -C new_dict all install prefix=${n_dist}
 	align ${n_dist}
 
 # For develop
@@ -132,7 +139,8 @@ elif [ $cmd = "download" ]; then
 
 elif [ $cmd = "build-debug" ]; then
 	n_dist=${PREFIX}_debug
-	build_all ${n_dist} "${CFLAGS} -g -O0"
+	build_all ${n_dist} "${CFLAGS} -g3 -O0"
+	make -C new_dict clean all install prefix=${n_dist}
 	align ${n_dist}
 
 elif [ $cmd = "diff" ]; then

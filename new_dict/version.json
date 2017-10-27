@@ -1,0 +1,66 @@
+{
+	"version-date" : "2017/01/12 10:18:33",
+	"generated-date" : "2017/10/27 19:00:42",
+	"flags" : [ "remove_flags", "correct_cyouon", "unify_hyphendash", "remove_ascii", "check_form"],
+	"includes" : {
+		"dic.juman.mdic" : {
+			"version-date" : "2017/01/12 10:18:32",
+			"generated-date" : "2017/10/27 19:00:39",
+			"includes" : {
+				"Assert.dic" : { "version-date": "2017/01/05 11:15:13" },
+				"AuxV.dic" : { "version-date": "2017/01/05 11:15:13" },
+				"Demonstrative.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Emoticon.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Lexicon_from_rengo.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Noun.hukusi.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Noun.keishiki.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Noun.koyuu.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Noun.suusi.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Postp.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Prefix.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Rendaku.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Rengo.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Special.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Suffix.dic" : { "version-date": "2017/01/05 11:15:14" },
+				"Townname.dic" : { "version-date": "2017/01/05 11:15:15" },
+				"ContentW.marked_dic" : { "version-date": "2017/01/12 10:18:31" }
+			}
+		},
+		"wikipediadic.mdic" : {
+			"version-date" : "2016/12/08 13:08:11",
+			"generated-date" : "2017/10/27 19:00:39",
+			"includes" : {
+				"wikipedia.dic.orig" : { "version-date": "2016/12/08 13:08:10" }
+			}
+		},
+		"wiktionarydic.mdic" : {
+			"version-date" : "2016/12/08 13:45:42",
+			"generated-date" : "2017/10/27 19:00:40",
+			"includes" : {
+				"wiktionary.dic" : { "version-date": "2016/09/21 18:35:58" },
+				"Wiktionary_KanjiMark.dic" : { "version-date": "2016/12/08 13:45:41" }
+			}
+		},
+		"webdic.mdic" : {
+			"version-date" : "2016/12/08 13:05:05",
+			"generated-date" : "2017/10/27 19:00:41",
+			"includes" : {
+				"Web.dic" : { "version-date": "2016/12/08 13:05:04" }
+			}
+		},
+		"onomatopedic.mdic" : {
+			"version-date" : "2016/12/22 13:57:05",
+			"generated-date" : "2017/10/27 19:00:41",
+			"includes" : {
+				"Onomatopoeia.dic" : { "version-date": "2016/12/22 13:57:04" }
+			}
+		},
+		"userdic.mdic" : {
+			"version-date" : "2016/10/31 17:22:07",
+			"generated-date" : "2017/10/27 19:00:42",
+			"includes" : {
+				"dummy.dic" : { "version-date": "2016/10/31 17:22:06" }
+			}
+		}
+	}
+}
