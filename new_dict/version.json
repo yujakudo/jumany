@@ -1,11 +1,13 @@
 {
 	"version-date" : "2017/01/12 10:18:33",
-	"generated-date" : "2017/10/27 19:00:42",
+	"generated-date" : "2017/10/31 16:49:26",
+	"package-name" : "kanototori",
+	"package-version" : "0.1",
 	"flags" : [ "remove_flags", "correct_cyouon", "unify_hyphendash", "remove_ascii", "check_form"],
 	"includes" : {
 		"dic.juman.mdic" : {
 			"version-date" : "2017/01/12 10:18:32",
-			"generated-date" : "2017/10/27 19:00:39",
+			"generated-date" : "2017/10/31 16:49:22",
 			"includes" : {
 				"Assert.dic" : { "version-date": "2017/01/05 11:15:13" },
 				"AuxV.dic" : { "version-date": "2017/01/05 11:15:13" },
@@ -28,14 +30,14 @@
 		},
 		"wikipediadic.mdic" : {
 			"version-date" : "2016/12/08 13:08:11",
-			"generated-date" : "2017/10/27 19:00:39",
+			"generated-date" : "2017/10/31 16:49:23",
 			"includes" : {
 				"wikipedia.dic.orig" : { "version-date": "2016/12/08 13:08:10" }
 			}
 		},
 		"wiktionarydic.mdic" : {
 			"version-date" : "2016/12/08 13:45:42",
-			"generated-date" : "2017/10/27 19:00:40",
+			"generated-date" : "2017/10/31 16:49:24",
 			"includes" : {
 				"wiktionary.dic" : { "version-date": "2016/09/21 18:35:58" },
 				"Wiktionary_KanjiMark.dic" : { "version-date": "2016/12/08 13:45:41" }
@@ -43,21 +45,21 @@
 		},
 		"webdic.mdic" : {
 			"version-date" : "2016/12/08 13:05:05",
-			"generated-date" : "2017/10/27 19:00:41",
+			"generated-date" : "2017/10/31 16:49:24",
 			"includes" : {
 				"Web.dic" : { "version-date": "2016/12/08 13:05:04" }
 			}
 		},
 		"onomatopedic.mdic" : {
 			"version-date" : "2016/12/22 13:57:05",
-			"generated-date" : "2017/10/27 19:00:41",
+			"generated-date" : "2017/10/31 16:49:25",
 			"includes" : {
 				"Onomatopoeia.dic" : { "version-date": "2016/12/22 13:57:04" }
 			}
 		},
 		"userdic.mdic" : {
 			"version-date" : "2016/10/31 17:22:07",
-			"generated-date" : "2017/10/27 19:00:42",
+			"generated-date" : "2017/10/31 16:49:25",
 			"includes" : {
 				"dummy.dic" : { "version-date": "2016/10/31 17:22:06" }
 			}

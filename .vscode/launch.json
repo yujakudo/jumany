@@ -6,8 +6,11 @@
 				"type": "cppdbg",
 				"request": "launch",
 				"program": "${workspaceRoot}/juman-7.01/juman/.libs/juman.exe",
-				"args": [],
-				"stopAtEntry": true,
+				"args": [
+					"-r", "scripts/new_dict.jumanrc",
+					"--dicv","2"
+				],
+				"stopAtEntry": false,
 				"cwd": "${workspaceRoot}",
 				"environment": [],
 				"externalConsole": true,

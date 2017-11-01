@@ -29,8 +29,16 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      FILE *ifp, *ofp;
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/juman/juman.c juman-7.01/juman/juman.c
 --- B:/msys64/tmp/juman-7.01/juman/juman.c	Tue Dec 27 17:29:53 2011
-+++ juman-7.01/juman/juman.c	Wed Oct 25 17:42:06 2017
-@@ -46,6 +46,9 @@ extern U_CHAR	        String[LENMAX];
++++ juman-7.01/juman/juman.c	Tue Oct 31 18:57:18 2017
+@@ -15,6 +15,7 @@
+ #endif
+ 
+ #include	<juman.h>
++#include "json_parse.h"
+ 
+ /*
+ ------------------------------------------------------------------------------
+@@ -46,6 +47,9 @@ extern U_CHAR	        String[LENMAX];
  int             JUMAN_server_mode = FALSE;
  int             JUMAN_server_foreground = FALSE;
  
@@ -40,7 +48,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  #define JUMAN_PORT   32000
  #ifndef MAXHOSTNAMELEN
  #define MAXHOSTNAMELEN 64
-@@ -54,6 +57,18 @@ int             JUMAN_server_foreground 
+@@ -54,6 +58,18 @@ int             JUMAN_server_foreground 
  static char juman_host[MAXHOSTNAMELEN];
  static unsigned short juman_port = JUMAN_PORT;
  
@@ -59,7 +67,15 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  
  /*
  ------------------------------------------------------------------------------
-@@ -151,7 +166,10 @@ int readtonl(FILE *fp)
+@@ -78,6 +94,7 @@ void    juman_standalone(void);
+ void    juman_server(char **argv, int port, int foreground);
+ static void set_juman_port(char* port);
+ static void set_juman_server(char* server);
++static void dic_version(int detail, char * jumanrc);
+ 
+ /*
+ ------------------------------------------------------------------------------
+@@ -151,7 +168,10 @@ int readtonl(FILE *fp)
  
  void juman_standalone(void)
  {
@@ -71,7 +87,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      
      if (!juman_init_rc(Jumanrc_Fileptr)) {	/* rcfile関係の初期化 */
  	fprintf(stderr, "error in .jumanrc\n");
-@@ -161,20 +179,36 @@ void juman_standalone(void)
+@@ -161,20 +181,36 @@ void juman_standalone(void)
  #ifdef HAVE_REGEX_H
      if (Onomatopoeia_Opt) Unkword_Pat_Num = compile_unkword_patterns();
  #endif
@@ -116,7 +132,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  	    continue;
  	} else {
  #ifdef _WIN32
-@@ -187,27 +221,27 @@ void juman_standalone(void)
+@@ -187,27 +223,27 @@ void juman_standalone(void)
  
  	if (Show_Opt_tag[0])
  	    if (!strncmp(String , Show_Opt_tag , strlen(Show_Opt_tag))) {
@@ -152,7 +168,26 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      }
      juman_close();
  }
-@@ -301,12 +335,21 @@ else {
+@@ -231,7 +267,8 @@ void juman_standalone(void)
+ void option_proc(int argc, char **argv)
+ {
+     int 	i;
+-
++	int dicv_detail = -1;	
++	
+     Show_Opt1 = Op_BB;
+     Show_Opt2 = Op_E2;
+     Show_Opt_jumanrc = 0;
+@@ -243,7 +280,7 @@ void option_proc(int argc, char **argv)
+     Repetition_Opt = 1;
+     Onomatopoeia_Opt = 1;
+     LongSoundRep_Opt = 1;
+-    LongSoundDel_Opt = 1;
++	LongSoundDel_Opt = 1;
+ 
+     for ( i=1; i<argc; i++ ) {
+ 	if ( argv[i][0] != '-' ) {
+@@ -301,12 +338,30 @@ else {
  		    }
  		    else if ( argv[i][0] == 'o' && argv[i][1] == 'n' && argv[i][2] == 'o') {
  			Repetition_Opt = Onomatopoeia_Opt = 0; /* onomatopoeia */
@@ -171,12 +206,33 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +				infile_Opt = argv[++i];
 +			} else if(0==strncmp(argv[i], "--of", 4)) {
 +				outfile_Opt = argv[++i];
++			} else if(0==strncmp(argv[i], "--dicv", 6)) {
++				if(i+1 == argc ) {
++					dicv_detail = 0;
++				} else {
++					dicv_detail = atoi(argv[i+1]);
++					if(dicv_detail || 0==strcmp(argv[i+1], "0")) {
++						i++;
++					}
++				}
 +			}
 +		}
  	    /* サーバーモード用のオプションの取扱い */
              else if ( argv[i][1] == 'S' ) JUMAN_server_mode = TRUE;
  #if ! defined _WIN32
-@@ -377,6 +420,9 @@ void juman_help()
+@@ -328,7 +383,10 @@ else {
+ 		juman_help();
+ 	    }
+ 	}
+-    }
++	}
++	if(dicv_detail>=0) {
++		dic_version(dicv_detail, (Show_Opt_jumanrc ? argv[Show_Opt_jumanrc]: NULL));
++	}
+ }
+ 
+ static void set_juman_port(char *port)
+@@ -377,7 +435,11 @@ void juman_help()
      fprintf(stderr, "             -u : disable unknown word processing\n");
      fprintf(stderr, "             -i : ignore an input line starting with 'string'\n");
      fprintf(stderr, "             -r : use 'rc_file' as '.jumanrc'\n");
@@ -184,8 +240,24 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +    fprintf(stderr, "             --of FILEPATH: path to output file\n");
 +    fprintf(stderr, "             --enc ENCODING: encoding e.g.'CP932', 'sjis,utf-8'\n");
      fprintf(stderr, "             -v : show version\n");
++    fprintf(stderr, "             --dicv <0-2>: show dictionary version\n");
      fprintf(stderr, "\n");
      fprintf(stderr, "             -S : start JUMAN server\n");
+ #if ! defined _WIN32
+@@ -395,3 +457,13 @@ void juman_version()
+     fprintf(stderr, "%s %s\n", PACKAGE_NAME, VERSION);
+     exit(0);
+ }
++
++static void dic_version(int detail, char * jumanrc) {
++	set_jumanrc_fileptr(jumanrc, TRUE, TRUE);
++    if (juman_init_rc(Jumanrc_Fileptr)) {
++		dici_print(NULL, detail);		
++	} else {
++		fprintf(stderr, "error in .jumanrc\n");
++	}
++    exit(0);
++}
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/juman/server.c juman-7.01/juman/server.c
 --- B:/msys64/tmp/juman-7.01/juman/server.c	Wed Nov 16 08:23:45 2011
 +++ juman-7.01/juman/server.c	Wed Oct 25 17:42:36 2017
@@ -855,7 +927,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/ext_api.h juman-7.01/lib/ext_api.h
 --- B:/msys64/tmp/juman-7.01/lib/ext_api.h	Thu Jan  1 00:00:00 1970
-+++ juman-7.01/lib/ext_api.h	Thu Sep 21 14:43:22 2017
++++ juman-7.01/lib/ext_api.h	Tue Oct 31 18:17:00 2017
 @@ -0,0 +1,129 @@
 +#ifndef EXT_API_H
 +#define EXT_API_H
@@ -1184,6 +1256,724 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +    *p_c = 0;
 +    return TRUE;
 +}
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/json_parse.c juman-7.01/lib/json_parse.c
+--- B:/msys64/tmp/juman-7.01/lib/json_parse.c	Thu Jan  1 00:00:00 1970
++++ juman-7.01/lib/json_parse.c	Tue Oct 31 20:45:44 2017
+@@ -0,0 +1,549 @@
++#include <string.h>
++#include <sys\stat.h>
++#include <stdlib.h>
++#include "json_parse.h"
++
++#define INIT_OBJ_SIZE	(8)
++#define is_space(ptr) (*(ptr)==' ' || *(ptr)=='\t' || *(ptr)=='\r' || *(ptr)=='\n')
++#define skip_space(ptr) {while(is_space(ptr)) (ptr)++;}
++#define skip_not_space(ptr) {while(!is_space(ptr) && *(ptr)!=0) (ptr)++;}
++
++static bool parse_val(JSON_T * json, JSON_VALUE_T * pval);
++
++static bool alloc_obj(JSON_TYPE_E type, JSON_OBJ_T * obj) {
++	size_t vals_size, keys_size;
++	char * buff;
++
++	if(obj->values==NULL) obj->allocd = INIT_OBJ_SIZE;
++	else obj->allocd *= 2;
++	vals_size = sizeof(JSON_VALUE_T) * obj->allocd;
++	keys_size = (type==JSON_OBJECT)? sizeof(char *) * obj->allocd: 0;
++	if(NULL==(buff = malloc(vals_size + keys_size))) return false;
++	if(obj->values!=NULL) {
++		memcpy(buff, obj->values, sizeof(JSON_VALUE_T) * obj->number);
++		if(keys_size) {
++			memcpy(buff + vals_size, obj->keys, sizeof(char *) * obj->number);
++		}
++		free(obj->values);
++	}
++	obj->values = (JSON_VALUE_T *)buff;
++	obj->keys = (char **)(buff + vals_size);
++	return true;
++}
++
++static void free_obj(JSON_OBJ_T * obj) {
++	int i;
++	JSON_VALUE_T * value;
++	JSON_TYPE_E type;
++	for(i=0, value=obj->values; i<obj->number; i++,value++) {
++		if(value->type==JSON_ARRAY || value->type==JSON_OBJECT) {
++			free_obj(&(value->v_obj));
++		}
++	}
++	free(obj->values);
++}
++
++static char * get_string(JSON_T * json) {
++	char * rep;
++	if(*(json->ptr)!='"') return NULL;
++	rep = ++(json->ptr);
++	while(*(json->ptr) && *(json->ptr)!='"') {
++		if(*(json->ptr)=='\\') (json->ptr)++;
++		(json->ptr)++;
++	}
++	if(*(json->ptr)!='"') return NULL;
++	*(json->ptr)++ = 0;
++	return rep;
++}
++
++static bool parse_object(JSON_T * json, JSON_VALUE_T * pval) {
++	JSON_OBJ_T * obj;
++	char ** pkey;
++	JSON_VALUE_T * pvalue;
++	char c_end;
++	bool b_result;
++
++	c_end = *(json->ptr)=='{'? '}': ']';
++	pval->type = *(json->ptr)=='{'? JSON_OBJECT: JSON_ARRAY;
++	obj = &(pval->v_obj);
++	obj->number = 0;
++	obj->allocd = 0;
++	obj->values = NULL;
++	obj->keys = NULL;
++	b_result = false;
++	(json->ptr)++;
++	while(*(json->ptr)) {
++		if(obj->number==obj->allocd) alloc_obj(pval->type, obj);		
++		if(pval->type==JSON_OBJECT) {
++			pkey = obj->keys + obj->number;
++			skip_space(json->ptr);
++			if(NULL==(*pkey = get_string(json))) break;
++			skip_space(json->ptr);
++			if(*(json->ptr)!=':') break;
++			(json->ptr)++;
++		}
++		pvalue= obj->values + obj->number;
++		skip_space(json->ptr);
++		if(false==(parse_val(json, pvalue))) break;
++		(obj->number)++;
++		skip_space(json->ptr);
++		if(*(json->ptr)==c_end) {
++			b_result = true;
++			(json->ptr)++;
++			break;
++		};
++		if(*(json->ptr)!=',') break;
++		(json->ptr)++;
++	}
++	if(!b_result) {
++		free_obj(obj);
++		return false;
++	}
++	return true;
++}
++
++static bool parse_str(JSON_T * json, JSON_VALUE_T * pval) {
++	pval->type = JSON_STRING;
++	if(NULL==(pval->v_string = get_string(json))) return false;
++	return true;
++}
++
++static bool parse_others(JSON_T * json, JSON_VALUE_T * pval) {
++	char * str;
++	char * ep;
++	str = json->ptr;
++	skip_not_space(json->ptr);
++	if(*(json->ptr)) *(json->ptr)++ = 0;
++	if(0==strcmp("null", str)) {
++		pval->type = JSON_NULL;
++	} else if(0==strcmp("true", str)) {
++		pval->type = JSON_BOOL;
++		pval->v_bool = true;
++	} else if(0==strcmp("false", str)) {
++		pval->type = JSON_BOOL;
++		pval->v_bool = false;
++	} else {
++		pval->v_number = strtod(str, &ep);
++		if(*ep) return false;
++	}
++	return true;
++}
++
++static bool parse_val(JSON_T * json, JSON_VALUE_T * pval) {
++	skip_space(json->ptr);
++	if(*(json->ptr)==0) return false;
++	switch(*(json->ptr)) {
++		case '{':
++		case '[':
++			return parse_object(json, pval);
++		case '"':
++			return parse_str(json, pval);
++		default:
++			return parse_others(json, pval);
++	}
++}
++
++static const JSON_VALUE_T * parse(JSON_T * json) {
++	json->ptr = json->buff;
++	if(false==parse_val(json, &(json->value))) return NULL;
++	return &(json->value);
++}
++
++static bool get_buff(JSON_T * json, size_t length) {
++	size_t size;
++	char * buff;
++	size = length + 1;
++	if(NULL==(buff=malloc(size))) return false;
++	json->buff = buff;
++	return true;
++}
++
++const JSON_VALUE_T * json_parse_file(JSON_T * json, const char * fn) {
++	struct stat status;
++	size_t length, written;
++	FILE * fp;
++	if(0!=stat(fn, &status)) return NULL;
++	if(false==get_buff(json, status.st_size)) return NULL;
++	if(NULL==(fp=fopen(fn, "rb"))) return NULL;
++	written = fread(json->buff, 1, status.st_size, fp);
++	fclose(fp);
++	*(json->buff + written) = 0;
++	return parse(json);
++}
++
++const JSON_VALUE_T * json_parse_str(JSON_T * json, const char * str) {
++	size_t length;
++	char * buff;
++	length = strlen(str);
++	if(false==get_buff(json, length)) return NULL;
++	strncpy(json->buff, str, length+1);
++	return parse(json);
++}
++
++JSON_T * json_open() {
++	JSON_T * json;
++	
++	if(NULL==(json = malloc(sizeof(JSON_T)))) return NULL;
++	json->buff = NULL;
++	json->ptr = NULL;
++	json->value.type = JSON_NULL;
++	return json;
++}
++
++void json_close(JSON_T * json) {
++	if(json->value.type==JSON_ARRAY || json->value.type==JSON_OBJECT) {
++		free_obj(&(json->value.v_obj));
++	}
++	if(json->buff!=NULL) free(json->buff);
++	free(json);
++}
++
++bool json_is_null(const JSON_VALUE_T * value) {
++	return (value->type==JSON_NULL)? true: false;
++}
++
++bool json_get_bool(const JSON_VALUE_T * value, bool * pval) {
++	if(value->type!=JSON_BOOL) return false;
++	*pval = value->v_bool;
++	return true;
++}
++
++bool json_get_int(const JSON_VALUE_T * value, int * pval) {
++	if(value->type!=JSON_NUMBER) return false;
++	*pval = (int)(value->v_number);
++	return true;
++}
++
++bool json_get_double(const JSON_VALUE_T * value, double * pval) {
++	if(value->type!=JSON_NUMBER) return false;
++	*pval = value->v_number;
++	return true;
++}
++
++bool json_get_str(const JSON_VALUE_T * value, const char ** pval) {
++	if(value->type!=JSON_STRING) return false;
++	*pval = value->v_string;
++	return true;
++}
++	
++const char * json_get_key(const JSON_VALUE_T * value, int idx) {
++	const JSON_OBJ_T * obj;
++	if(value->type!=JSON_OBJECT) return false;
++	obj = &(value->v_obj);
++	if(idx<0 || obj->number<=idx) return NULL;
++	return *(obj->keys + idx);
++}
++
++JSON_VALUE_T * json_search(const JSON_VALUE_T * value, const char * key) {
++	int i;
++	char ** keys;
++	const JSON_OBJ_T * obj;
++	if(value->type!=JSON_OBJECT) return false;
++	obj = &(value->v_obj);
++	keys = obj->keys;
++	for(i=0; i<obj->number; i++) {
++		if(0==strcmp(key, *(keys + i))) {
++			return obj->values + i;
++		}
++	}
++	return NULL;
++}
++
++JSON_VALUE_T * json_get_item(const JSON_VALUE_T * value, int idx) {
++	if(value->type!=JSON_OBJECT && value->type!=JSON_ARRAY) return NULL;
++	if(idx<0 || value->v_obj.number<=idx) return NULL;
++	return value->v_obj.values + idx;
++}
++
++typedef struct print_info_t {
++	FILE * fp;
++	int level;
++	bool b_symbole;
++	int indent;
++	bool b_shallow;
++} PRINT_INFO_T;
++
++#define IS_DEEP(pinfo)	((pinfo)->level >0 && (pinfo)->indent + 1 > (pinfo)->level)
++#define PRINT_STR(pinfo, str)	fprintf((pinfo)->fp, (pinfo)->b_symbole? "\"%s\"": "%s", (str))
++#define PRINTF(pinfo, ...)  fprintf((pinfo)->fp, __VA_ARGS__)
++#define PRINT_SPACE(pinfo, b_inline) ((b_inline)? fprintf((pinfo)->fp, " "): print_indent(pinfo))
++#define TO_INLINE(obj) ((obj)->number==0 \
++	|| ((obj)->number==1 \
++		&& (obj)->values->type!=JSON_ARRAY \
++		&& (obj)->values->type!=JSON_OBJECT))
++
++static size_t get_str(const JSON_VALUE_T * value, PRINT_INFO_T * pinfo, char * str, size_t size) {
++	int written = 0;
++	switch(value->type) {
++		case JSON_NULL:
++			written = snprintf(str, size, "null");
++			break;
++		case JSON_BOOL:
++			written = snprintf(str, size, (value->v_bool)? "true": "false");
++			break;
++		case JSON_NUMBER:
++			written = snprintf(str, size, "%lf", value->v_number);
++			break;
++		case JSON_STRING:
++			written = snprintf(str, size, pinfo->b_symbole? "\"%s\"": "%s", value->v_string);
++			break;
++	}
++	if(written >= size) return 0; 
++	return written; 
++}
++
++static void print_val(const JSON_VALUE_T * value, PRINT_INFO_T * pinfo);
++
++static int print_indent(PRINT_INFO_T * pinfo) {
++	int i, indent;
++	const char * space = "  "; 
++	PRINTF(pinfo, "\n");
++	indent = pinfo->indent;
++	if(pinfo->b_shallow && indent) indent--;
++	for(i=0; i<indent; i++) {
++		PRINTF(pinfo, space);
++	}
++	return indent * 2;
++}
++	
++static bool has_obj(const JSON_OBJ_T * obj) {
++	const JSON_VALUE_T * pvalue;
++	int i;
++	pvalue = obj->values;
++	for(i=0; i<obj->number; i++,pvalue++) {
++		if(pvalue->type==JSON_ARRAY || pvalue->type==JSON_OBJECT) {
++			return true;
++		} 
++	}
++	return false;
++}
++
++static void print_obj_compact(JSON_TYPE_E type, const JSON_OBJ_T * obj, PRINT_INFO_T * pinfo) {
++	int i, x;
++	char ** pkey;
++	JSON_VALUE_T * pvalue;
++	char buff[78];
++	char * wptr;
++	size_t written, remain;
++
++	pkey = obj->keys;
++	pvalue = obj->values;
++	x = print_indent(pinfo);
++	for(i=0; i<obj->number; i++,pkey++,pvalue++) {
++		if(i>0) {
++			PRINTF(pinfo, ", ");
++			x+=2;
++		}
++		wptr = buff;
++		remain = sizeof(buff);
++		if(type==JSON_OBJECT) {
++			written = snprintf(wptr, remain, pinfo->b_symbole? "\"%s\"": "%s", *pkey);
++			if(written < remain-5) {
++				wptr += written;
++				strncpy(wptr, " : ", remain);
++				wptr += 3;
++				remain -= (written + 3);
++			} else {
++				remain = 0;
++			}
++		}
++		if(remain>0) {
++			written = get_str(pvalue, pinfo, wptr, remain);
++			if(written==0) remain = 0;
++			else remain -= written;
++		}
++		if(remain) {
++			if(x >= remain) {
++				x = print_indent(pinfo);
++			} else {
++				x += sizeof(buff) - remain;
++			}
++			PRINTF(pinfo, buff);
++		} else {
++			print_indent(pinfo);
++			if(type==JSON_OBJECT) {
++				PRINT_STR(pinfo, *pkey);			
++				PRINTF(pinfo, " : ");
++			}
++			print_val(pvalue, pinfo);
++			x = sizeof(buff) + 1;
++		}
++	}
++}
++
++static void print_obj_full(JSON_TYPE_E type, const JSON_OBJ_T * obj, PRINT_INFO_T * pinfo) {
++	int i, j;
++	char ** pkey;
++	JSON_VALUE_T * pvalue;
++
++	pkey = obj->keys;
++	pvalue = obj->values;
++	j = 0;
++	for(i=0; i<obj->number; i++,pkey++,pvalue++) {
++		if((pvalue->type==JSON_ARRAY || pvalue->type==JSON_OBJECT)
++			&& IS_DEEP(pinfo)) {
++			continue;
++		}
++		if(j>0) PRINTF(pinfo, ",");
++		j++;
++		PRINT_SPACE(pinfo, TO_INLINE(obj));
++		if(type==JSON_OBJECT) {
++			PRINT_STR(pinfo, *pkey);			
++			PRINTF(pinfo, " : ");
++		}
++		print_val(pvalue, pinfo);
++	}
++}
++
++static void print_obj(JSON_TYPE_E type, const JSON_OBJ_T * obj, PRINT_INFO_T * pinfo) {
++	const char * s_brackets;
++
++	s_brackets = (type==JSON_OBJECT)? "{\0}": "[\0]";
++	if(pinfo->b_symbole) PRINTF(pinfo, s_brackets);
++	pinfo->indent++;
++	if(!has_obj(obj) && !TO_INLINE(obj)) {
++		print_obj_compact(type, obj, pinfo);
++	} else {
++		print_obj_full(type, obj, pinfo);
++	}
++	pinfo->indent--;
++	if(pinfo->b_symbole) {
++		PRINT_SPACE(pinfo, TO_INLINE(obj));
++		PRINTF(pinfo, s_brackets+2);
++	}
++}
++
++static void print_val(const JSON_VALUE_T * value, PRINT_INFO_T * pinfo) {
++	char buff[81];
++	switch(value->type) {
++		case JSON_NULL:
++		case JSON_BOOL:
++		case JSON_NUMBER:
++			get_str(value, pinfo, buff, sizeof(buff));
++			PRINTF(pinfo, buff); 
++			break;
++		case JSON_STRING:
++			PRINT_STR(pinfo, value->v_string);
++			break;
++		case JSON_ARRAY:
++		case JSON_OBJECT:
++			print_obj(value->type, &(value->v_obj), pinfo);
++			break;
++	}
++}
++
++void json_fprint(const JSON_VALUE_T * value, FILE * fp, int level, bool b_symbole) {
++	PRINT_INFO_T info;
++	if(fp==NULL) fp = stdout;
++	info.fp = fp;
++	info.level = level;
++	info.b_symbole = b_symbole;
++	info.indent = 0;
++	info.b_shallow = (!info.b_symbole && 
++		(value->type==JSON_ARRAY || value->type==JSON_OBJECT))
++		? true: false;
++	print_val(value, &info);
++	fprintf(fp, "\n");
++}
++
++//	for JUMAN
++const char const * FLAG_STR_L[] = {
++	"remove_flags",
++	"correct_cyouon",
++	"unify_hyphendash",
++	"add_hyphen_minus",
++	"remove_ascii",
++	"add_ascii",
++	"check_form",
++	NULL
++};
++
++typedef struct dici_t {
++	JSON_T * json;
++	const JSON_VALUE_T * root;
++	unsigned long flags;
++} DICI_T;
++
++DICI_T DICI;
++
++static void dici_set_flags() {
++	int i, j;
++	const JSON_VALUE_T * flags;
++	const JSON_VALUE_T * flag;
++	const char * s_flag;
++	if(NULL==(flags = json_search(DICI.root, "flags"))) return;
++	for(i=0; NULL!=(flag=json_get_item(flags, i)); i++) {
++		if(json_get_str(flag, &s_flag)) {
++			for(j=0; FLAG_STR_L[j]!=NULL; j++) {
++				if(0==strcmp(s_flag, FLAG_STR_L[j])) {
++					DICI.flags |= 1<<j;
++					break;
++				}
++			}
++		}
++	}
++}
++
++bool dici_set_dir(const char * s_dir) {
++	char path[1024];
++
++	DICI.json = NULL;
++	DICI.root = NULL;
++	DICI.flags = 0;
++
++	path[sizeof(path)-1] = 0;
++	strncpy(path, s_dir, sizeof(path));
++	strncat(path, "/version.json", sizeof(path));
++	if(path[sizeof(path)-1]) return false;
++	if(NULL==(DICI.json = json_open())) return false;
++	if(NULL==(DICI.root = json_parse_file(DICI.json, path))) return false;
++	dici_set_flags();
++}
++
++bool dici_has_flag(unsigned int flag) {
++	return (DICI.flags & flag)? true: false;
++}
++
++static void dici_print_head(FILE * fp) {
++	char str[128];
++	const JSON_VALUE_T * val;
++	const char * sval;
++	val = DICI.root;
++	str[0] = 0;
++	if(NULL!=(val = json_search(DICI.root, "package-name"))) {
++		if(json_get_str(val, &sval)) strncat(str, sval, sizeof(str));
++	}
++	if(NULL!=(val = json_search(DICI.root, "package-version"))) {
++		if(json_get_str(val, &sval)) {
++			strncat(str, " ", sizeof(str));
++			strncat(str, sval, sizeof(str));
++		}
++	}
++	if(NULL!=(val = json_search(DICI.root, "version-date"))) {
++		if(json_get_str(val, &sval)) {
++			strncat(str, " ", sizeof(str));
++			strncat(str, sval, sizeof(str));
++		}
++	}
++	str[sizeof(str)-1] = 0;
++	fprintf(fp, str);
++}
++
++void dici_print(FILE * fp, int detail) {
++	if(NULL==fp) fp = stdout;
++	if(NULL==DICI.root) {
++		fprintf(fp, "No version.json\n");
++		return;
++	}
++	switch(detail) {
++		case 0:
++		dici_print_head(fp);
++		break;
++		case 1:
++		json_fprint(DICI.root, fp, 3, false);
++		break;
++		default:
++		json_fprint(DICI.root, fp, 0, false);
++		break;
++	}
++}
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/json_parse.h juman-7.01/lib/json_parse.h
+--- B:/msys64/tmp/juman-7.01/lib/json_parse.h	Thu Jan  1 00:00:00 1970
++++ juman-7.01/lib/json_parse.h	Tue Oct 31 19:40:55 2017
+@@ -0,0 +1,161 @@
++#ifndef JSON_PARSE_H
++#define JSON_PARSE_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#include <stdio.h>
++#include <stdbool.h>
++
++typedef enum json_type_e {
++	JSON_NULL,
++	JSON_BOOL,
++	JSON_STRING,
++	JSON_NUMBER,
++	JSON_ARRAY,
++	JSON_OBJECT
++} JSON_TYPE_E;
++
++struct json_value_t;
++
++typedef struct json_obj_t {
++	int number;
++	struct json_value_t * values;
++	char ** keys;
++	size_t allocd;
++} JSON_OBJ_T;
++
++typedef struct json_value_t {
++	JSON_TYPE_E type;
++	union {
++		bool v_bool;
++		char * v_string;
++		double v_number;
++		struct json_obj_t v_obj;
++	};
++} JSON_VALUE_T;
++
++typedef struct json_t {
++	char * buff;			///<	buffer
++	char * ptr;				///<	read pointer
++	JSON_VALUE_T value;		///<	root.
++} JSON_T;
++
++///	Open json object.
++///	@return the object, or NULL when fail.
++extern JSON_T * json_open();
++
++///	Close JSON object.
++///	@return json object.
++extern void json_close(JSON_T * json);
++
++///	Parse json file
++///	@param json json object.
++///	@param fn	Path to input file.
++///	@return parsed valse, or NULL when fail.
++extern const JSON_VALUE_T * json_parse_file(JSON_T * json, const char * fn);
++
++///	Parse json string
++///	@param json json object.
++///	@param str	String to parse.
++///	@return parsed valse, or NULL when fail.
++extern const JSON_VALUE_T * json_parse_str(JSON_T * json, const char * str);
++
++///	Is null?
++///	@param value Value
++///	@return true when null, otherwise false.
++extern bool json_is_null(const JSON_VALUE_T * value);
++
++///	Get bool value.
++///	@param value Value
++///	@param pval [out]bool value.
++///	@return true if the type is bool, otherwise false.
++extern bool json_get_bool(const JSON_VALUE_T * value, bool * pval);
++
++///	Get floored int value.
++///	@param value Value
++///	@param pval [out]int value.
++///	@return true if the type is number, otherwise false.
++extern bool json_get_int(const JSON_VALUE_T * value, int * pval);
++
++///	Get double value.
++///	@param value Value
++///	@param pval [out]double value.
++///	@return true if the type is number, otherwise false.
++extern bool json_get_double(const JSON_VALUE_T * value, double * pval);
++
++///	Get string value.
++///	@param value Value
++///	@param pval [out]string value.
++///	@return true if the type is string, otherwise false.
++extern bool json_get_str(const JSON_VALUE_T * value, const char ** pval);
++
++///	Get array value
++///	@param value Value
++///	@param pval [out]array value.
++///	@return true if the type is array, otherwise false.
++// extern bool json_get_array(JSON_VALUE_T * value, JSON_OBJ_T ** pval);
++
++///	Get object value
++///	@param object Value
++///	@param pval [out]object value.
++///	@return true if the type is object, otherwise false.
++// extern bool json_get_object(JSON_VALUE_T * value, JSON_OBJ_T ** pval);
++
++///	Get key of object.
++///	@param value Value
++///	@param idx Index.
++///	@return String of key, or NULL if type or idx is wrong.
++extern const char * json_get_key(const JSON_VALUE_T * value, int idx);
++
++///	Gat value from object.
++///	@param value Value
++///	@param key Key
++///	@return Value or NULL if type or key is wrong.
++extern JSON_VALUE_T * json_search(const JSON_VALUE_T * value, const char * key);
++
++///	Get value from array.
++///	@param value Value
++///	@param idx Index.
++///	@return Value or NULL if type or idx is wrong.
++extern JSON_VALUE_T * json_get_item(const JSON_VALUE_T * value, int idx);
++
++///	Print json data.
++///	@param value Value
++///	@param fp File struct pointer.
++///	@param value Value
++///	@param level Nesting level to print. if 0, print all.
++///	@param b_symbole if false, '"{}[],' is not print.
++extern void json_fprint(const JSON_VALUE_T * value, FILE * fp, int level, bool b_symbole);
++
++///	for JUMAN.
++
++#define DICF_REMOVE_FLAGS		0x0001
++#define DICF_CORRECT_CYOUON		0x0002
++#define DICF_UNIFY_HYPHENDASH	0x0004
++#define DICF_ADD_HYPHEN_MINUS	0x0008
++#define DICF_REMOVE_ASCII		0x0010
++#define DICF_ADD_ASCII			0x0020
++#define DICF_CHECK_FORM			0x0040
++
++///	Set dic or grammer directory
++///	@param s_dir Path to directory
++///	@return true as success or false.
++extern bool dici_set_dir(const char * s_dir);
++
++///	Test the dictionary has the flag
++///	@param flag flag to test. eg. DICF_UNIFY_HYPHENDASH.
++///	@return true as it has or false.
++extern bool dici_has_flag(unsigned int flag);
++
++///	Print information of the dictionary.
++///	@param fp file struct pointer.
++///	@param detail Print detail level. 0-2 
++extern void dici_print(FILE * fp, int detail);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif //	JSON_PARSE_H
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/juman.h juman-7.01/lib/juman.h
 --- B:/msys64/tmp/juman-7.01/lib/juman.h	Mon Dec 15 09:47:28 2014
 +++ juman-7.01/lib/juman.h	Wed Oct 25 17:41:28 2017
@@ -1264,8 +2054,8 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +#define IS_ABS_PATH(s_path) ( *(s_path)=='/' || *(s_path)=='\\' || *(s_path+1)==':')
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/juman_lib.c juman-7.01/lib/juman_lib.c
 --- B:/msys64/tmp/juman-7.01/lib/juman_lib.c	Mon Dec 15 09:48:31 2014
-+++ juman-7.01/lib/juman_lib.c	Wed Oct 25 17:03:26 2017
-@@ -90,8 +90,10 @@
++++ juman-7.01/lib/juman_lib.c	Tue Oct 31 17:57:15 2017
+@@ -90,8 +90,11 @@
  #include <config.h>
  #endif
  
@@ -1273,10 +2063,11 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  #include	<juman.h>
  #include	<const.h>
 +#include	"encoder.h"
++#include	"json_parse.h"
  
  /*
  ------------------------------------------------------------------------------
-@@ -140,11 +142,11 @@ DIC_FILES               DicFile;
+@@ -140,11 +143,11 @@ DIC_FILES               DicFile;
  
  COST_OMOMI       	cost_omomi;    
  char             	Jumangram_Dirname[FILENAME_MAX]; 
@@ -1289,7 +2080,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  
  /*
  ------------------------------------------------------------------------------
-@@ -189,6 +191,7 @@ int             prolong_ng_bunrui4_1, pr
+@@ -189,6 +192,7 @@ int             prolong_ng_bunrui4_1, pr
  int             jiritsu_num;
  int             p_buffer_num;
  CONNECT_COST	connect_cache[CONNECT_MATRIX_MAX];
@@ -1297,7 +2088,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  
  /* MRPH_BUFFER_MAX の制限を撤廃，動的にメモリ確保 */
  int		 mrph_buffer_max = 0;
-@@ -209,6 +212,8 @@ U_CHAR		yomi[MIDASI_MAX];    /* 活用�
+@@ -209,6 +213,8 @@ U_CHAR		yomi[MIDASI_MAX];    /* 活用�
  extern COST_OMOMI       cost_omomi;     /*k.n*/
  extern char             Jumangram_Dirname[FILENAME_MAX];  /*k.n*/
  
@@ -1306,7 +2097,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  /*
  ------------------------------------------------------------------------------
  	prototype definition of functions       >>> changed by T.Nakamura <<<
-@@ -257,6 +262,11 @@ int	pos_right_process(int position);
+@@ -257,6 +263,11 @@ int	pos_right_process(int position);
  int	check_connect(int pos_start, int m_num, char opt);
  int	juman_sent(void);
  
@@ -1318,7 +2109,67 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  /*
  ------------------------------------------------------------------------------
  	PROCEDURE: <changeDictionary>          >>> changed by T.Nakamura <<<
-@@ -364,6 +374,7 @@ BOOL juman_init_rc(FILE *fp)
+@@ -303,7 +314,7 @@ int push_dic_file_for_win(char *dic_file
+ 
+ BOOL juman_init_rc(FILE *fp)
+ {
+-    int  num, win32_decided = 0;
++    int  num;
+     char dic_file_name[BUFSIZE], full_file_name[BUFSIZE];
+     CELL *cell1, *cell2;
+     
+@@ -315,55 +326,18 @@ BOOL juman_init_rc(FILE *fp)
+     cost_omomi.rensetsu = RENSETSU_WEIGHT_DEFAULT * MRPH_DEFAULT_WEIGHT;
+     cost_omomi.cost_haba = COST_WIDTH_DEFAULT * MRPH_DEFAULT_WEIGHT;
+ 
+-    /* 
+-     *  MS Windows は辞書のパスを,juman.ini から取得する (辞書Dir も1つのみ (やや手抜))
+-     *  しかも gramfile == dicfile
+-     *  Changed by Taku Kudoh (taku@pine.kuee.kyoto-u.ac.jp)
+-     */
+-#ifdef _WIN32
+-    /* 文法ファイル */
+-    num = 0;
+-#ifdef WIN_AZURE
+-    GetPrivateProfileString("juman","dicfile",WIN_AZURE_DICFILE_DEFAULT,Jumangram_Dirname,sizeof(Jumangram_Dirname),"juman.ini");
+-#else
+-    GetPrivateProfileString("juman","dicfile","",Jumangram_Dirname,sizeof(Jumangram_Dirname),"juman.ini");
+-#endif
+-    if (Jumangram_Dirname[0]) {
+-	grammar(NULL);
+-	katuyou(NULL);
+-	connect_table(NULL);
+-	connect_matrix(NULL);
+-
+-	/* 辞書ファイル */
+-#ifdef WIN_AZURE
+-	/* use dic, autodic and wikipediadic for Azure */
+-	GetPrivateProfileString("juman","dicfile",WIN_AZURE_DICFILE_DEFAULT,dic_file_name,sizeof(dic_file_name),"juman.ini");
+-	push_dic_file_for_win(dic_file_name, num++);
+-	GetPrivateProfileString("juman","autodicfile",WIN_AZURE_AUTODICFILE_DEFAULT,dic_file_name,sizeof(dic_file_name),"juman.ini");
+-	push_dic_file_for_win(dic_file_name, num++);
+-	GetPrivateProfileString("juman","wikipediadicfile",WIN_AZURE_WIKIPEDIADICFILE_DEFAULT,dic_file_name,sizeof(dic_file_name),"juman.ini");
+-	push_dic_file_for_win(dic_file_name, num++);
+-#else
+-	GetPrivateProfileString("juman","dicfile","",dic_file_name,sizeof(dic_file_name),"juman.ini");
+-	push_dic_file_for_win(dic_file_name, num++);
+-#endif
+-	DicFile.number = num;
+-	changeDictionary(0);
+-	win32_decided = 1;
+-    }
+-    /* juman.iniが利用できなければ、jumanrcから読む */
+-#endif
+-    
++	//	Remove all of reading from .ini for Windows.
+     while (!s_feof(fp)) { 
+ 	LineNoForError = LineNo ;
+ 	cell1 = s_read(fp);
+ 
+ 	/* 文法ファイル */
+-	if (!win32_decided && !strcmp(DEF_GRAM_FILE, _Atom(car(cell1)))) {
++	if (!strcmp(DEF_GRAM_FILE, _Atom(car(cell1)))) {
+ 	    if (!Atomp(cell2 = car(cdr(cell1)))) {
  		return FALSE;
  	    } else {
  		strcpy(Jumangram_Dirname , _Atom(cell2));
@@ -1326,7 +2177,16 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  		grammar(NULL);
  		katuyou(NULL);
  		connect_table(NULL);
-@@ -383,6 +394,7 @@ BOOL juman_init_rc(FILE *fp)
+@@ -372,7 +346,7 @@ BOOL juman_init_rc(FILE *fp)
+ 	}
+ 	  
+ 	/* 辞書ファイル */
+-	else if (!win32_decided && !strcmp(DEF_DIC_FILE, _Atom(car(cell1)))) {
++	else if (!strcmp(DEF_DIC_FILE, _Atom(car(cell1)))) {
+ 	    cell2 = cdr(cell1) ;
+ 	    for(num = 0 ; ; num++) {
+ 		if( Null(car(cell2)) )  break;
+@@ -383,6 +357,7 @@ BOOL juman_init_rc(FILE *fp)
  		    error(ConfigError, "Too many dictionary files.", EOA);
  		else {
  		    strcpy(dic_file_name, _Atom(car(cell2)));
@@ -1334,7 +2194,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  		    if ((endchar(dic_file_name)) != '/')
  			strcat(dic_file_name, "/");
  		    cell2 = cdr(cell2);
-@@ -437,7 +449,19 @@ BOOL juman_init_rc(FILE *fp)
+@@ -437,7 +412,20 @@ BOOL juman_init_rc(FILE *fp)
  	/* 未定義語コスト (3.4以降不要)
  	else if (!strcmp("未定義語品詞", _Atom(car(cell1))));
  	*/
@@ -1352,10 +2212,11 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
 +			return FALSE;
 +		}
 +	}
++	dici_set_dir(Jumangram_Dirname);
      return TRUE;
  }
  
-@@ -518,7 +542,9 @@ BOOL juman_close(void)
+@@ -518,7 +506,9 @@ BOOL juman_close(void)
  
    free(rensetu_tbl);
    free(rensetu_mtr);
@@ -1366,7 +2227,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
    return TRUE;
  }
  
-@@ -2397,6 +2423,7 @@ int juman_sent(void)
+@@ -2397,6 +2387,7 @@ int juman_sent(void)
  	process_buffer_max += BUFFER_BLOCK_SIZE;
      }
  
@@ -1374,7 +2235,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
      length = strlen(String);
  
      if (length == 0) return FALSE;	/* 空行はスキップ */
-@@ -2549,3 +2576,40 @@ int juman_sent(void)
+@@ -2549,3 +2540,40 @@ int juman_sent(void)
  
      return TRUE;
  }
@@ -1428,17 +2289,17 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  static int (*my_ungetc)(int c, FILE *fp) = ungetc;
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/lib/Makefile.in juman-7.01/lib/Makefile.in
 --- B:/msys64/tmp/juman-7.01/lib/Makefile.in	Mon Dec 15 09:50:09 2014
-+++ juman-7.01/lib/Makefile.in	Mon Sep 25 19:15:52 2017
++++ juman-7.01/lib/Makefile.in	Sun Oct 29 14:41:47 2017
 @@ -72,8 +72,11 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
  libjuman_la_LIBADD =
  am_libjuman_la_OBJECTS = connect.lo getid.lo grammar.lo iotool.lo \
  	katuyou.lo lisp.lo pat.lo patfile.lo zentohan.lo juman_lib.lo \
 -	japanese.lo
-+	japanese.lo encoder.lo ext_api.lo
++	japanese.lo encoder.lo ext_api.lo json_parse.lo
  libjuman_la_OBJECTS = $(am_libjuman_la_OBJECTS)
 +libjuman_OBJECTS = connect.o getid.o grammar.o iotool.o \
 +							katuyou.o lisp.o pat.o patfile.o zentohan.o juman_lib.o \
-+							japanese.o encoder.o ext_api.o
++							japanese.o encoder.o ext_api.o json_parse.o
  libjuman_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
  	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
  	$(libjuman_la_LDFLAGS) $(LDFLAGS) -o $@
@@ -1451,7 +2312,7 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  lib_LTLIBRARIES = libjuman.la
 -libjuman_la_SOURCES = connect.c const.h getid.c grammar.c iotool.c katuyou.c lisp.c pat.c patfile.c zentohan.c juman.h juman_lib.c juman_pat.h japanese.c
 +libjuman_la_SOURCES = connect.c const.h getid.c grammar.c iotool.c katuyou.c lisp.c pat.c patfile.c zentohan.c juman.h juman_lib.c juman_pat.h japanese.c \
-+											encoder.h encoder.c ext_api.h ext_api.c
++											encoder.h encoder.c ext_api.h ext_api.c json_parse.h json_parse.c
  libjuman_la_LDFLAGS = -version-info @LIBJUMAN_VERSION_INFO@
  all: all-am
  
@@ -1469,12 +2330,13 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  mostlyclean-compile:
  	-rm -f *.$(OBJEXT)
  
-@@ -298,6 +309,8 @@ distclean-compile:
+@@ -298,6 +309,9 @@ distclean-compile:
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pat.Plo@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/patfile.Plo@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zentohan.Plo@am__quote@
 +@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/encoder.Plo@am__quote@
 +@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ext_api.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/json_parse.Plo@am__quote@
  
  .c.o:
  @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -1491,19 +2353,6 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  /******************************************************
  * pat_strcmp_prefix --- プレフィクスマッチ
  *
-diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/Makefile.in juman-7.01/Makefile.in
---- B:/msys64/tmp/juman-7.01/Makefile.in	Mon Dec 15 09:50:09 2014
-+++ juman-7.01/Makefile.in	Tue Oct 24 21:02:28 2017
-@@ -239,7 +239,8 @@ target_alias = @target_alias@
- top_build_prefix = @top_build_prefix@
- top_builddir = @top_builddir@
- top_srcdir = @top_srcdir@
--SUBDIRS = lib makeint makemat makepat juman dic autodic wikipediadic doc
-+# SUBDIRS = lib makeint makemat makepat juman dic autodic wikipediadic doc
-+SUBDIRS = lib makeint makemat makepat juman doc
- jumanrcdir = $(sysconfdir)
- nodist_jumanrc_DATA = jumanrc
- dist_noinst_DATA = jumanrc.in
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/makeint/makeint.c juman-7.01/makeint/makeint.c
 --- B:/msys64/tmp/juman-7.01/makeint/makeint.c	Thu Sep 15 08:43:32 2011
 +++ juman-7.01/makeint/makeint.c	Wed Oct 25 17:10:46 2017
@@ -1532,6 +2381,18 @@ diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .lib
  enum	ErrorCode	{NotList, IllegalForm, ConflictGobi,
  			   NoMidasi, LongMidasi, 
  			   NoYomi,   LongYomi, 
+diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/makemat/makemat.c juman-7.01/makemat/makemat.c
+--- B:/msys64/tmp/juman-7.01/makemat/makemat.c	Thu Sep 15 08:43:45 2011
++++ juman-7.01/makemat/makemat.c	Thu Oct 26 12:56:41 2017
+@@ -11,7 +11,7 @@
+ #include	"makemat.h"
+ 
+ #define         KANKEI_MAX      100
+-#define         REN_TBL_MAX     6000
++#define         REN_TBL_MAX     8000
+ #define         REN_MTR_MAX     6000
+ 
+ /*
 diff -rupBN -x *dic -x perl -x stamp-h1 -x winconf -x jumanrc -x libtool -x .libs -x .deps -x config.* -x *.log -x *.o -x *.lo -x *.a -x *.la -x *.so -x *.exe -x Makefile B:/msys64/tmp/juman-7.01/makepat/makepat.c juman-7.01/makepat/makepat.c
 --- B:/msys64/tmp/juman-7.01/makepat/makepat.c	Thu Sep 15 08:48:28 2011
 +++ juman-7.01/makepat/makepat.c	Wed Oct 25 17:12:32 2017

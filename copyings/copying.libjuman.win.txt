@@ -7,10 +7,9 @@ libjuman.<system description>.so is including followings:
 		license:	3-Clause BSD
 		main program
 
-	ext_juman-7.01_03.patch
-		URL:		https://github.com/yujakudo/jumany/
-		license:	Public domain
-		patch for JUMAN-7.10 to add extra API
+  Additional files by ext_juman-7.01_<versin>.patch:
+    Public domain
+    for extra interface and functions.
 
 	libsystre	1.0.1-2
 		license		2-Clause BSD
